@@ -4888,13 +4888,34 @@ function applyConfigOverrides(map) {
     applySessionCount(CONFIG.sessionCount);
   }
 
-  // Music URL
+  // Music URL — swap source hanya kalau URL beda dan audio BELUM dimainkan
+  // (kalau sudah playing, jangan disrupt — biar tetap mengalir tanpa stutter).
   if (map['general.music_url']) {
     const audio = document.getElementById('bg-music');
     if (audio) {
-      audio.innerHTML = `<source src="${escapeAttr(map['general.music_url'])}" type="audio/mpeg">`;
-      audio.load();
+      const newUrl = String(map['general.music_url']);
+      const currentSource = audio.querySelector('source');
+      const currentUrl = currentSource ? currentSource.getAttribute('src') : '';
+      const isFresh = audio.paused && audio.currentTime === 0;
+      if (newUrl !== currentUrl && isFresh) {
+        audio.innerHTML = '<source src="' + escapeAttr(newUrl) + '" type="audio/mpeg">';
+        audio.load();
+      }
     }
+  }
+  // Setelah konten siap, mulai pre-buffer audio di background supaya pas user
+  // klik "Buka Undangan" nanti, audio sudah siap putar tanpa stutter.
+  preloadAudio();
+}
+
+function preloadAudio() {
+  const audio = document.getElementById('bg-music');
+  if (!audio) return;
+  if (audio.preload !== 'auto') audio.preload = 'auto';
+  // load() hanya kalau audio belum dimainkan (idle), supaya tidak reset
+  // playback yang sedang jalan.
+  if (audio.paused && audio.currentTime === 0) {
+    try { audio.load(); } catch (e) {}
   }
 }
 
@@ -5187,7 +5208,14 @@ let isPlaying = false;
 
 function playMusic() {
   const audio = document.getElementById('bg-music');
+  if (!audio) return;
   audio.volume = 0.4;
+  // Defensive: kalau preload masih "none" (mis. user klik "Buka" sangat cepat
+  // sebelum sheet/fallback preload kick in), aktifkan preload + load() dulu.
+  if (audio.preload !== 'auto') {
+    audio.preload = 'auto';
+    try { audio.load(); } catch (e) {}
+  }
   const playPromise = audio.play();
   if (playPromise !== undefined) {
     playPromise.then(() => {
@@ -5688,6 +5716,10 @@ window.addEventListener('DOMContentLoaded', () => {
   installImageErrorFallback();
   buildGuestDropdown();
   loadSheetContent();
+  // Fallback: kalau sheet lambat/gagal, audio tetap mulai pre-buffer setelah
+  // 1.5 detik pakai URL HTML default. Tujuan: pas user klik "Buka Undangan"
+  // (biasanya >3 detik baca cover), audio sudah siap putar tanpa stutter.
+  setTimeout(preloadAudio, 1500);
   getGuestFromURL();
   setupReveal();
   renderWishes();
