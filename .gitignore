@@ -1,0 +1,14 @@
+# Folder backup & file lama — tidak dipakai undangan
+uploads/
+
+# Memory Claude Code (lokal saja)
+memory/
+MEMORY.md
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
