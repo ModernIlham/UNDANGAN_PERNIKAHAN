@@ -4,6 +4,7 @@ uploads/
 # Memory Claude Code (lokal saja)
 memory/
 MEMORY.md
+.claude/
 
 # OS / editor files
 .DS_Store
