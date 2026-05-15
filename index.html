@@ -668,7 +668,7 @@ section {
   height: 100%;
   border-radius: 50% / 42%;
   overflow: hidden;
-  background: var(--sogan-dark);
+  background: var(--sogan-dark) url('assets/loading.svg') center/cover no-repeat;
   box-shadow:
     0 0 0 2px var(--kuning-keemasan),
     0 0 0 4px var(--putih-tulang),
@@ -3792,6 +3792,103 @@ section > p {
   margin-bottom: 4px;
 }
 
+/* =========================================================================
+   MOBILE OPTIMIZATION — kurangi efek mahal supaya tidak lag/crash di HP
+   ========================================================================= */
+@media (max-width: 768px) {
+  /* Mahal di mobile GPU: mix-blend-mode pada pattern background */
+  .pattern-wayang-light,
+  .pattern-wayang-dark,
+  .pattern-wayang-tile {
+    mix-blend-mode: normal !important;
+    opacity: 0.06 !important;
+  }
+
+  /* Filter blur saat reveal — tidak perlu di mobile (mahal & menyebabkan jank scroll) */
+  .reveal:not(.visible),
+  .reveal-left:not(.visible),
+  .reveal-right:not(.visible),
+  .reveal-scale:not(.visible) {
+    filter: none !important;
+  }
+
+  /* Text-shadow berlapis (matur-suwun dll) — paling mahal saat scroll */
+  .matur-suwun {
+    text-shadow:
+      0 0 8px rgba(245, 217, 138, 0.85),
+      1px 1px 0 rgba(245, 217, 138, 0.6) !important;
+  }
+  .matur-sub {
+    text-shadow:
+      0 0 6px rgba(245, 217, 138, 0.85),
+      1px 0 0 rgba(245, 217, 138, 0.5) !important;
+  }
+
+  /* Animasi loop yang tidak penting — pause */
+  .gift-sentinel,
+  .royal-sweep,
+  .royal-stars,
+  .gallery-sentinel {
+    animation: none !important;
+  }
+
+  /* Float ornaments — kurangi opacity, disable filter, lepas will-change supaya tidak alokasi GPU layer */
+  .d-float {
+    animation-duration: 12s !important;
+    filter: none !important;
+    opacity: 0.18 !important;
+    will-change: auto !important;
+    translate: none !important;
+  }
+
+  /* Petals (jatuh terus-menerus) — paling berat di mobile, sembunyikan */
+  #petals-container,
+  .petal {
+    display: none !important;
+  }
+
+  /* Box-shadow berlapis — sederhanakan */
+  .gift-card,
+  .event-card,
+  .couple-card,
+  .rsvp-form,
+  .photo-oval {
+    box-shadow: 0 4px 14px rgba(58, 32, 15, 0.25) !important;
+  }
+
+  /* Cover gold-glow & vignette — kurangi intensitas */
+  .cover-gold-glow {
+    opacity: 0.5 !important;
+    filter: none !important;
+  }
+}
+
+/* Respect user yang setting "reduce motion" di OS */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.2s !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal:not(.visible),
+  .reveal-left:not(.visible),
+  .reveal-right:not(.visible),
+  .reveal-scale:not(.visible) {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  #petals-container,
+  .petal { display: none !important; }
+}
+
+/* Placeholder loading.svg — biar tidak distorsi saat ukuran asli */
+img[src$="loading.svg"] {
+  object-fit: cover !important;
+  background: linear-gradient(180deg, #f5e8c8, #e8d4a8);
+}
+
 </style>
 </head>
 <body style="background-color: rgb(34, 23, 5)">
@@ -3940,7 +4037,7 @@ section > p {
       <div class="photo-oval-wrap bride">
         <span class="photo-crown img-orn5" style="width: 70px; top: -20px"></span>
         <div class="photo-oval">
-          <img id="photo-bride" data-c-src="couple.bride.photo" src="https://images.unsplash.com/photo-1594552072238-b8a33785b261?w=400&h=500&fit=crop" alt="Cintya">
+          <img id="photo-bride" data-c-src="couple.bride.photo" src="assets/loading.svg" loading="eager" fetchpriority="high" decoding="async" alt="Cintya">
         </div>
       </div>
 
@@ -3967,7 +4064,7 @@ section > p {
       <div class="photo-oval-wrap groom">
         <span class="photo-crown img-orn5" style="width: 70px; top: -20px"></span>
         <div class="photo-oval">
-          <img id="photo-groom" data-c-src="couple.groom.photo" src="https://images.unsplash.com/photo-1507081323647-4d250478b919?w=400&h=500&fit=crop" alt="Fathoni">
+          <img id="photo-groom" data-c-src="couple.groom.photo" src="assets/loading.svg" loading="eager" fetchpriority="high" decoding="async" alt="Fathoni">
         </div>
       </div>
 
@@ -4122,33 +4219,33 @@ section > p {
       <span class="gallery-sentinel right" aria-hidden="true"></span>
       <div class="gallery-grid stagger-children">
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.1.a" src="https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.1.b" src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=500&fit=crop&sat=-20" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.1.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.1.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.2.a" src="https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.2.b" src="https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=400&h=500&fit=crop" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.2.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.2.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.3.a" src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.3.b" src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=500&fit=crop" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.3.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.3.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.4.a" src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.4.b" src="https://images.unsplash.com/photo-1529636798458-92182e662485?w=400&h=500&fit=crop" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.4.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.4.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.5.a" src="https://images.unsplash.com/photo-1525772764200-be829a350797?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.5.b" src="https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&h=500&fit=crop" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.5.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.5.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       <div class="gallery-item" data-slide="0">
-        <img class="gs gs-0 active" data-c-src="gallery.6.a" src="https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=400&h=500&fit=crop" alt="">
-        <img class="gs gs-1" data-c-src="gallery.6.b" src="https://images.unsplash.com/photo-1604017011826-d3b4c23f8914?w=400&h=500&fit=crop" alt="">
+        <img class="gs gs-0 active" data-c-src="gallery.6.a" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
+        <img class="gs gs-1" data-c-src="gallery.6.b" src="assets/loading.svg" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>
       </div>
@@ -4303,7 +4400,7 @@ section > p {
      MUSIC: Gamelan Jawa Instrumental dari Internet Archive
      File: "Witing Klopo" - lembut & sesuai untuk pernikahan
      =========================================================== -->
-<audio id="bg-music" loop preload="auto" crossorigin="anonymous">
+<audio id="bg-music" loop preload="none" crossorigin="anonymous">
   <source data-c-src="general.music_url" src="https://archive.org/download/instrumental-gamelan-jawa-vol-3/05%20Witing%20Klopo.mp3" type="audio/mpeg">
   <source src="https://archive.org/download/instrumental-gamelan-jawa-vol-3/07%20Rino-Rino.mp3" type="audio/mpeg">
 </audio>
@@ -4471,14 +4568,14 @@ section > p {
        ['couple.section_label', 'THE BRIDE & GROOM'],
        ['couple.section_title', 'Sang Mempelai'],
        ['couple.intro', 'Maha Suci Allah yang telah menciptakan mahkluk-Nya berpasang-pasangan. Ya Allah, perkenankanlah pernikahan putra-putri kami :'],
-       ['couple.bride.photo', 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?w=400&h=500&fit=crop'],
+       ['couple.bride.photo', ''],
        ['couple.bride.tag', 'THE BRIDE'],
        ['couple.bride.name_script', 'Cintya'],
        ['couple.bride.name_full', 'CINTYA FEBRI PRASETYOWATI'],
        ['couple.bride.title', 'A.Md. Kep., S.Kep., Ns.'],
        ['couple.bride.parent_label', '— PUTRI PERTAMA DARI —'],
        ['couple.bride.parent_html', '<strong>Bpk. Wahyudi Prasetiyono</strong><br>&<br><strong>Almh. Ibu Hj. Sumarmiati,</strong><br><em>S.Kep., Ns., M.Kep.</em>'],
-       ['couple.groom.photo', 'https://images.unsplash.com/photo-1507081323647-4d250478b919?w=400&h=500&fit=crop'],
+       ['couple.groom.photo', ''],
        ['couple.groom.tag', 'THE GROOM'],
        ['couple.groom.name_script', 'Fathoni'],
        ['couple.groom.name_full', 'MOH. ILHAM FATHONI'],
@@ -4535,18 +4632,18 @@ section > p {
        ['gallery.section_label', 'OUR MOMENTS'],
        ['gallery.section_title', 'Galeri Kenangan'],
        ['gallery.quote', '"A moment is better when shared with you."'],
-       ['gallery.1.a', 'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=500&fit=crop'],
-       ['gallery.1.b', 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=500&fit=crop&sat=-20'],
-       ['gallery.2.a', 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=400&h=500&fit=crop'],
-       ['gallery.2.b', 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=400&h=500&fit=crop'],
-       ['gallery.3.a', 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&h=500&fit=crop'],
-       ['gallery.3.b', 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=500&fit=crop'],
-       ['gallery.4.a', 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=500&fit=crop'],
-       ['gallery.4.b', 'https://images.unsplash.com/photo-1529636798458-92182e662485?w=400&h=500&fit=crop'],
-       ['gallery.5.a', 'https://images.unsplash.com/photo-1525772764200-be829a350797?w=400&h=500&fit=crop'],
-       ['gallery.5.b', 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=400&h=500&fit=crop'],
-       ['gallery.6.a', 'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=400&h=500&fit=crop'],
-       ['gallery.6.b', 'https://images.unsplash.com/photo-1604017011826-d3b4c23f8914?w=400&h=500&fit=crop'],
+       ['gallery.1.a', ''],
+       ['gallery.1.b', ''],
+       ['gallery.2.a', ''],
+       ['gallery.2.b', ''],
+       ['gallery.3.a', ''],
+       ['gallery.3.b', ''],
+       ['gallery.4.a', ''],
+       ['gallery.4.b', ''],
+       ['gallery.5.a', ''],
+       ['gallery.5.b', ''],
+       ['gallery.6.a', ''],
+       ['gallery.6.b', ''],
        ['gift.section_label', 'WEDDING GIFT'],
        ['gift.section_title', 'Tanda Kasih'],
        ['gift.intro', 'Doa restu Bapak/Ibu/Saudara/i merupakan karunia yang sangat berarti bagi kami. Jika ingin memberikan tanda kasih, dapat dilakukan secara cashless melalui:'],
@@ -4692,11 +4789,11 @@ function applyContent(map) {
     if (v != null && v !== '') el.innerHTML = v;
   });
   document.querySelectorAll('[data-c-src]').forEach(el => {
-    const v = map[el.dataset.cSrc];
+    const v = normalizeImageUrl(map[el.dataset.cSrc]);
     if (v) el.src = v;
   });
   document.querySelectorAll('[data-c-bg]').forEach(el => {
-    const v = map[el.dataset.cBg];
+    const v = normalizeImageUrl(map[el.dataset.cBg]);
     if (v) el.style.backgroundImage = "url('" + String(v).replace(/'/g, "\\'") + "')";
   });
   document.querySelectorAll('[data-c-href]').forEach(el => {
@@ -4724,11 +4821,11 @@ function applyGallery(items) {
     const a = item.a || item.image || item.url || '';
     const b = item.b || '';
     if (!a) return '';
-    const aHtml = `<img class="gs gs-0 active" src="${escapeAttr(a)}" alt="">`;
+    const aHtml = `<img class="gs gs-0 active" src="${escapeAttr(a)}" loading="lazy" decoding="async" alt="">`;
     if (b) {
       return `<div class="gallery-item" data-slide="0">
         ${aHtml}
-        <img class="gs gs-1" src="${escapeAttr(b)}" alt="">
+        <img class="gs gs-1" src="${escapeAttr(b)}" loading="lazy" decoding="async" alt="">
         <span class="gs-dots"><i class="gd active"></i><i class="gd"></i></span>
       </div>`;
     }
@@ -4739,6 +4836,28 @@ function applyGallery(items) {
 
 function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Convert Google Drive share/open/uc URLs → direct CDN URL yang lebih reliable
+// di mobile (lh3.googleusercontent.com). User sering paste link share Drive
+// (https://drive.google.com/file/d/ID/view?usp=sharing) yang BUKAN format img.
+function normalizeImageUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  const m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^&]*&)*id=)([a-zA-Z0-9_-]{10,})/);
+  if (m) return 'https://lh3.googleusercontent.com/d/' + m[1] + '=w800';
+  return url;
+}
+
+// Pasang error handler global pada SEMUA img: kalau gagal load (URL invalid,
+// network drop, CORS, dll) → fallback ke loading.svg supaya tidak tampil
+// broken icon. Pakai capture phase + flag supaya tidak loop.
+function installImageErrorFallback() {
+  document.addEventListener('error', function(e) {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.src.endsWith('loading.svg')) return;
+    img.src = 'assets/loading.svg';
+  }, true);
 }
 
 function applyConfigOverrides(map) {
@@ -5527,6 +5646,13 @@ function setupReveal() {
    PETALS
    ========================================================= */
 function startPetals() {
+  // Skip di mobile / reduced-motion — DOM churn (create+remove tiap 900ms)
+  // memberatkan HP. Sudah di-hide via CSS, tapi skip JS-nya juga supaya tidak
+  // boros memori.
+  if (window.matchMedia('(max-width: 768px)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
   const petalShapes = [
     '<svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 Q14 8 10 18 Q6 8 10 2 Z" fill="#c9a25a"/></svg>',
     '<svg width="14" height="14" viewBox="0 0 20 20"><path d="M10 2 Q15 7 10 18 Q5 7 10 2 Z" fill="#e7c989"/></svg>',
@@ -5559,6 +5685,7 @@ if ('scrollRestoration' in history) {
 window.scrollTo(0, 0);
 
 window.addEventListener('DOMContentLoaded', () => {
+  installImageErrorFallback();
   buildGuestDropdown();
   loadSheetContent();
   getGuestFromURL();
@@ -5745,6 +5872,12 @@ function injectSectionDepth() {
    berbeda saat scroll. Memberi rasa kedalaman cinematic.
    ========================================================= */
 function initParallax() {
+  // Skip parallax di mobile / reduced-motion — getBoundingClientRect tiap scroll
+  // = reflow expensive yang bikin jank di GPU mobile lemah.
+  if (window.matchMedia('(max-width: 768px)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
   const floats = Array.from(document.querySelectorAll('.d-float'));
   if (!floats.length) return;
   // Kecepatan acak per element (0.05 – 0.25) supaya tidak monoton

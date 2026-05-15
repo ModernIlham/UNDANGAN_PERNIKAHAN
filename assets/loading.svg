@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5e8c8"/>
+      <stop offset="100%" stop-color="#e8d4a8"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect x="20" y="20" width="360" height="460" fill="none" stroke="#c9a25a" stroke-width="1" opacity="0.4"/>
+  <rect x="28" y="28" width="344" height="444" fill="none" stroke="#c9a25a" stroke-width="0.5" opacity="0.3"/>
+  <g transform="translate(200 220)" opacity="0.75">
+    <circle r="36" fill="none" stroke="#c9a25a" stroke-width="2"/>
+    <circle cx="0" cy="-36" r="5" fill="#6b3d1c">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="31.2" cy="18" r="5" fill="#6b3d1c" opacity="0.7">
+      <animate attributeName="opacity" values="0.7;1;0.3" dur="1.4s" repeatCount="indefinite" begin="0.47s"/>
+    </circle>
+    <circle cx="-31.2" cy="18" r="5" fill="#6b3d1c" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;0.7;1" dur="1.4s" repeatCount="indefinite" begin="0.93s"/>
+    </circle>
+  </g>
+  <text x="200" y="305" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#6b3d1c" letter-spacing="4" font-weight="bold">MEMUAT FOTO</text>
+  <line x1="160" y1="320" x2="240" y2="320" stroke="#c9a25a" stroke-width="0.5" opacity="0.5"/>
+</svg>
