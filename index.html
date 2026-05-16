@@ -5761,25 +5761,70 @@ function copyAndFlip(text, btn) {
 }
 
 /* =========================================================
-   GALLERY SLIDE TOGGLE — klik untuk pindah ke slide berikutnya
-   Setiap cell punya 2 slide; klik akan toggle antara keduanya.
+   GALLERY SLIDE TOGGLE + AUTO FLIP
+   - Setiap cell punya 2 slide
+   - Auto-flip jalan terus dengan pola loncat-loncat (crisscross)
+     supaya pergantian terasa "banyak moment", bukan beruntun monoton
+   - Klik/sentuh manapun pause auto-flip + flip frame yang diklik
+   - Setelah 8 detik tidak ada interaksi, auto-flip resume
    ========================================================= */
+const GALLERY_FLIP_INTERVAL_MS = 750;   // jeda antar flip per frame
+const GALLERY_IDLE_RESUME_MS  = 8000;   // setelah klik, tunggu sekian sblm resume
+// Pola loncat: top-left -> bot-mid -> top-right -> bot-left -> top-mid -> bot-right
+const GALLERY_FLIP_ORDER = [0, 4, 2, 3, 1, 5];
+
+let gallerySlideInterval = null;
+let galleryIdleTimeout  = null;
+let galleryFlipTick     = 0;
+
+function flipGalleryItem(item) {
+  const slides = item.querySelectorAll('.gs');
+  const dots   = item.querySelectorAll('.gs-dots .gd');
+  const total  = slides.length;
+  if (total < 2) return;
+  const current = parseInt(item.dataset.slide || '0', 10);
+  const next    = (current + 1) % total;
+  slides.forEach((s, i) => s.classList.toggle('active', i === next));
+  dots.forEach((d, i)   => d.classList.toggle('active', i === next));
+  item.dataset.slide = String(next);
+}
+
+function startGalleryAutoFlip() {
+  const items = document.querySelectorAll('.gallery-item');
+  if (items.length === 0) return;
+  if (gallerySlideInterval) clearInterval(gallerySlideInterval);
+  gallerySlideInterval = setInterval(() => {
+    const idx = GALLERY_FLIP_ORDER[galleryFlipTick % GALLERY_FLIP_ORDER.length];
+    const target = items[idx];
+    if (target) flipGalleryItem(target);
+    galleryFlipTick++;
+  }, GALLERY_FLIP_INTERVAL_MS);
+}
+
+function pauseGalleryAutoFlip() {
+  if (gallerySlideInterval) {
+    clearInterval(gallerySlideInterval);
+    gallerySlideInterval = null;
+  }
+  if (galleryIdleTimeout) clearTimeout(galleryIdleTimeout);
+  galleryIdleTimeout = setTimeout(startGalleryAutoFlip, GALLERY_IDLE_RESUME_MS);
+}
+
 function initGallerySlides() {
+  // Reset state (penting kalau dipanggil ulang setelah applyGallery rebuild)
+  if (gallerySlideInterval) { clearInterval(gallerySlideInterval); gallerySlideInterval = null; }
+  if (galleryIdleTimeout)   { clearTimeout(galleryIdleTimeout); galleryIdleTimeout = null; }
+  galleryFlipTick = 0;
+
   document.querySelectorAll('.gallery-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      // Cegah klik dari trigger ke parent
       e.stopPropagation();
-      const slides = item.querySelectorAll('.gs');
-      const dots = item.querySelectorAll('.gs-dots .gd');
-      const total = slides.length;
-      if (total < 2) return;
-      const current = parseInt(item.dataset.slide || '0', 10);
-      const next = (current + 1) % total;
-      slides.forEach((s, i) => s.classList.toggle('active', i === next));
-      dots.forEach((d, i) => d.classList.toggle('active', i === next));
-      item.dataset.slide = String(next);
+      flipGalleryItem(item);
+      pauseGalleryAutoFlip();
     });
   });
+
+  startGalleryAutoFlip();
 }
 
 /* =========================================================
