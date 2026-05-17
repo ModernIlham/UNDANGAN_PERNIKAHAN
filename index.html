@@ -6546,23 +6546,156 @@ function hideQrModal(event) {
   document.getElementById('qr-modal-overlay').classList.remove('show');
 }
 
+// Download e-tiket sebagai CARD lengkap (QR + branding + nama + tanggal)
+// supaya saat tersimpan di galeri HP gampang dikenali "ini e-tiket pernikahan".
 function downloadQrImage() {
   if (typeof qrcode === 'undefined' || !_qrCurrentToken) {
     showToast('QR belum ter-render', 'error');
     return;
   }
+
+  // Generate QR data URL
   const qr = qrcode(0, 'M');
   const qrUrl = `${location.origin}${location.pathname}?mode=scan&t=${_qrCurrentToken}&n=${encodeURIComponent(_qrCurrentName)}`;
   qr.addData(qrUrl);
   qr.make();
-  const dataUrl = qr.createDataURL(10, 4);  // cell 10px, margin 4
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = `e-tiket-${_qrCurrentToken}.png`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast('✓ Gambar QR ter-download', 'success');
+  const qrDataUrl = qr.createDataURL(10, 0);
+
+  // Ambil konten dinamis dari sheet (atau default)
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+  const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  const sessLabel   = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[_qrCurrentSession])
+                      || _qrCurrentSession || '';
+
+  // Compose card via Canvas (720x1080 portrait)
+  const W = 720, H = 1080;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  // Background gradient ivory -> cream
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#faf0d8');
+  grad.addColorStop(1, '#e8d4a8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Decorative double frame (gold)
+  const GOLD = '#d4af64';
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(28, 28, W-56, H-56);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(40, 40, W-80, H-80);
+
+  // Dots at 4 corners of outer frame
+  ctx.fillStyle = GOLD;
+  [[28,28],[W-28,28],[28,H-28],[W-28,H-28]].forEach(([x,y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
+  });
+
+  ctx.fillStyle = '#150a03';
+  ctx.textAlign = 'center';
+
+  // "E-TIKET KEHADIRAN" header
+  ctx.font = '600 26px Georgia, serif';
+  ctx.fillStyle = '#6b3d1c';
+  ctx.fillText('E - T I K E T   K E H A D I R A N', W/2, 110);
+
+  // Short divider under header
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 80, 130); ctx.lineTo(W/2 - 12, 130);
+  ctx.moveTo(W/2 + 12, 130); ctx.lineTo(W/2 + 80, 130);
+  ctx.stroke();
+  ctx.fillStyle = GOLD;
+  ctx.beginPath(); ctx.arc(W/2, 130, 4, 0, Math.PI*2); ctx.fill();
+
+  // Couple names (big serif)
+  ctx.font = '700 58px Georgia, serif';
+  ctx.fillStyle = '#150a03';
+  ctx.fillText(coupleNames, W/2, 200);
+
+  // Date
+  ctx.font = '500 24px Georgia, serif';
+  ctx.fillStyle = '#6b3d1c';
+  ctx.fillText(eventDate, W/2, 240);
+
+  // Load QR as image, then draw, then save
+  const img = new Image();
+  img.onload = () => {
+    const qrSize = 440;
+    const qrX = (W - qrSize) / 2;
+    const qrY = 290;
+
+    // White rounded background for QR
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 2;
+    const padding = 24;
+    roundRect(ctx, qrX - padding, qrY - padding, qrSize + padding*2, qrSize + padding*2, 12);
+    ctx.fill(); ctx.stroke();
+
+    // Draw QR
+    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+    // Guest name (large)
+    ctx.fillStyle = '#150a03';
+    ctx.font = '600 30px Georgia, serif';
+    ctx.fillText(_qrCurrentName, W/2, qrY + qrSize + 90);
+
+    // Session label
+    if (sessLabel) {
+      ctx.font = 'italic 18px Georgia, serif';
+      ctx.fillStyle = '#6b3d1c';
+      const truncSess = sessLabel.length > 50 ? sessLabel.slice(0, 47) + '...' : sessLabel;
+      ctx.fillText(truncSess, W/2, qrY + qrSize + 122);
+    }
+
+    // Token (monospace)
+    ctx.font = '400 15px "Courier New", monospace';
+    ctx.fillStyle = '#8a5a2e';
+    ctx.fillText('TOKEN: ' + _qrCurrentToken, W/2, qrY + qrSize + 150);
+
+    // Footer hint
+    ctx.font = 'italic 14px Georgia, serif';
+    ctx.fillStyle = '#6b3d1c';
+    ctx.fillText('Tunjukkan kode ini kepada penerima tamu', W/2, H - 90);
+    ctx.fillText('untuk mendapatkan souvenir', W/2, H - 68);
+
+    // Tagline
+    ctx.font = '500 11px Georgia, serif';
+    ctx.fillStyle = GOLD;
+    ctx.fillText('WEDDING INVITATION  ·  ' + coupleNames.toUpperCase(), W/2, H - 45);
+
+    // Download
+    const url = cv.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = String(_qrCurrentName).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    a.download = `e-tiket-${safeName}-${_qrCurrentToken}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✓ E-tiket card ter-download — siap di-share / save ke galeri', 'success');
+  };
+  img.onerror = () => {
+    showToast('Gagal generate gambar QR', 'error');
+  };
+  img.src = qrDataUrl;
+}
+
+// Helper: rounded rectangle path
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
 }
 
 /* ===== KIRIM E-TIKET QR KE NOMOR WA ===== */
@@ -6728,21 +6861,60 @@ async function handleScannedData(token, name) {
       '&name=' + encodeURIComponent(name || '') +
       '&key=' + encodeURIComponent(_scannerActiveKey || '');
     const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
+
+    // Cek HTTP status
+    if (!res.ok) {
+      showScanResult('error',
+        `<strong>✗ HTTP ${res.status}</strong><br>Server tidak respons OK. Cek apakah Apps Script Web App di-deploy dengan akses "Anyone".`);
+      return;
+    }
+
+    let data;
+    try { data = await res.json(); }
+    catch (e) {
+      const txt = await res.text().catch(() => '');
+      showScanResult('error',
+        `<strong>✗ Respons bukan JSON</strong><br>Apps Script kemungkinan return HTML error page.<br>Cek log Apps Script.<br><code style="display:block;background:rgba(0,0,0,0.3);padding:6px;margin-top:6px;font-size:10px;max-height:80px;overflow:auto">${escapeHtml(txt.slice(0,300))}</code>`);
+      return;
+    }
+
+    // Diagnostic: kalau response punya 'content' tapi tidak ada 'success',
+    // berarti Apps Script BELUM di-update dengan handler redeem
+    if (data.success === undefined && (data.content !== undefined || data.gallery !== undefined)) {
+      showScanResult('error',
+        `<strong>⚠ APPS SCRIPT BELUM DI-UPDATE</strong><br><br>
+         Server kembalikan konten undangan, bukan respons validasi token.
+         Berarti fungsi <code>redeemToken</code> &amp; konstanta <code>SCANNER_KEY</code>
+         belum ada di Apps Script Anda.<br><br>
+         <strong>Cara fix:</strong><br>
+         1. Buka Sheet → Extensions → Apps Script<br>
+         2. Paste kode terbaru dari comment HTML (cari blok <code>===== SALIN MULAI DI SINI =====</code>)<br>
+         3. Pastikan ada baris <code>const SCANNER_KEY = 'souvenir2026';</code> di awal<br>
+         4. Save (Ctrl+S)<br>
+         5. Deploy → Manage deployments → Edit (pencil) → New version → Deploy<br>
+         6. Refresh scanner page, scan ulang`);
+      return;
+    }
+
     if (data.success) {
       if (data.alreadyRedeemed) {
         const t = data.timestamp ? new Date(data.timestamp).toLocaleString('id-ID') : '-';
         showScanResult('warning',
-          `<strong>⚠ SUDAH DIPAKAI</strong><br>Tamu: <strong>${data.name || name || '-'}</strong><br>Diambil pada: ${t}`);
+          `<strong>⚠ SUDAH DIPAKAI</strong><br>Tamu: <strong>${escapeHtml(data.name || name || '-')}</strong><br>Diambil pada: ${escapeHtml(t)}`);
       } else {
         showScanResult('success',
-          `<strong>✓ VALID — BERI SOUVENIR</strong><br>Tamu: <strong>${data.name || name || '-'}</strong><br>Token: ${token}`);
+          `<strong>✓ VALID — BERI SOUVENIR</strong><br>Tamu: <strong>${escapeHtml(data.name || name || '-')}</strong><br>Token: ${escapeHtml(token)}`);
       }
     } else {
-      showScanResult('error', `<strong>✗ Validasi gagal</strong><br>${data.error || 'unknown error'}`);
+      const errMsg = data.error || 'unknown error';
+      const hint = /unauthor/i.test(errMsg)
+        ? '<br><br><em>Kemungkinan: SCANNER_KEY di Apps Script tidak sama dengan CONFIG.scannerKey di HTML. Pastikan keduanya identical.</em>'
+        : '';
+      showScanResult('error', `<strong>✗ Validasi gagal</strong><br>${escapeHtml(errMsg)}${hint}`);
     }
   } catch (e) {
-    showScanResult('error', '<strong>Gagal hubungi server.</strong> Cek koneksi internet.');
+    showScanResult('error',
+      `<strong>✗ Gagal hubungi server</strong><br>Cek koneksi internet.<br><code style="display:block;background:rgba(0,0,0,0.3);padding:6px;margin-top:6px;font-size:10px">${escapeHtml(String(e))}</code>`);
   }
 }
 
