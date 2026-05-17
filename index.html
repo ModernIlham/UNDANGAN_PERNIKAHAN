@@ -5196,6 +5196,9 @@ img[src$="loading.svg"] {
    "🛠️ Undangan" di Sheet untuk re-run setup / reset default.
 
    ===== SALIN MULAI DI SINI =====
+   // === KUNCI SCANNER — HARUS sama dengan CONFIG.scannerKey di HTML ===
+   const SCANNER_KEY = 'souvenir2026';
+
    function setupSheet() {
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      setupContentSheet_(ss, false);
@@ -5204,17 +5207,6 @@ img[src$="loading.svg"] {
      setupAttendanceSheet_(ss);
      try { SpreadsheetApp.getUi().alert('Setup selesai. Sekarang Deploy → Web app, salin URL ke HTML.'); }
      catch (e) { Logger.log('Setup selesai.'); }
-   }
-   function setupAttendanceSheet_(ss) {
-     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-     if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
-       sh.setFrozenRows(1);
-       sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 240);
-       sh.setColumnWidth(3, 100); sh.setColumnWidth(4, 160);
-       sh.setColumnWidth(5, 160);
-     }
    }
    function resetContentDefaults() {
      setupContentSheet_(SpreadsheetApp.getActiveSpreadsheet(), true);
@@ -5258,21 +5250,37 @@ img[src$="loading.svg"] {
        sh.setFrozenRows(1);
      }
    }
-   // GANTI ke string acak yang sulit ditebak. HARUS sama dengan
-   // CONFIG.scannerKey di HTML index. Bila ganti, deploy ulang Web App.
-   const SCANNER_KEY = 'souvenir2026';
+   function setupAttendanceSheet_(ss) {
+     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
+       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.setFrozenRows(1);
+       sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 240);
+       sh.setColumnWidth(3, 100); sh.setColumnWidth(4, 160);
+       sh.setColumnWidth(5, 160);
+     }
+   }
+   function ensureAttendanceHeader_(sh) {
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
+       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.setFrozenRows(1);
+     }
+   }
 
+   // ============ WEB APP ENDPOINTS ============
    function doGet(e) {
      const params = (e && e.parameter) || {};
-     // Action: redeem token (scanner penerima tamu)
+     // Scanner penerima tamu — redeem QR token
      if (params.action === 'redeem') {
        return redeemToken(params.token, params.name, params.key);
      }
-     // Action: register token (admin sync tamu ke sheet, sebelum acara)
+     // Admin pre-register token (opsional, untuk sync sheet)
      if (params.action === 'register') {
        return registerToken(params.token, params.name, params.session, params.key);
      }
-     // Default: return semua konten + attendance (untuk badge "Sudah Hadir")
+     // Default: return konten + galeri + attendance (untuk badge HADIR di buku tamu)
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      const out = {
        content: sheetToObject(ss.getSheetByName('Content')),
@@ -5282,14 +5290,20 @@ img[src$="loading.svg"] {
      return ContentService.createTextOutput(JSON.stringify(out))
        .setMimeType(ContentService.MimeType.JSON);
    }
-   // Schema Attendance: ['token','name','session','registered_at','redeemed_at']
-   function ensureAttendanceHeader_(sh) {
+   function doPost(e) {
+     const data = JSON.parse(e.postData.contents);
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     let sh = ss.getSheetByName('RSVP') || ss.insertSheet('RSVP');
      if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
-       sh.setFrozenRows(1);
+       sh.appendRow(['timestamp','invitedTo','name','attendance','guests','session','message']);
      }
+     sh.appendRow([new Date(), data.invitedTo||'', data.name||'',
+       data.attendance||'', data.guests||'', data.session||'', data.message||'']);
+     return ContentService.createTextOutput(JSON.stringify({ok:true}))
+       .setMimeType(ContentService.MimeType.JSON);
    }
+
+   // ============ REDEEM / REGISTER TOKEN (scanner) ============
    function redeemToken(token, name, key) {
      if (!key || key !== SCANNER_KEY) {
        return ContentService.createTextOutput(JSON.stringify({
@@ -5304,19 +5318,16 @@ img[src$="loading.svg"] {
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      ensureAttendanceHeader_(sh);
      const data = sh.getDataRange().getValues();
-     // Cari token di tabel
      for (let i = 1; i < data.length; i++) {
        if (data[i][0] === token) {
-         const redeemedAt = data[i][4];  // column E
+         const redeemedAt = data[i][4];
          if (redeemedAt) {
-           // Sudah pernah redeem
            return ContentService.createTextOutput(JSON.stringify({
              success: true, alreadyRedeemed: true,
              name: data[i][1] || name || '',
              timestamp: new Date(redeemedAt).toISOString()
            })).setMimeType(ContentService.MimeType.JSON);
          }
-         // Token registered tapi belum redeem -> mark redeemed
          const now = new Date();
          sh.getRange(i + 1, 5).setValue(now);
          return ContentService.createTextOutput(JSON.stringify({
@@ -5326,7 +5337,7 @@ img[src$="loading.svg"] {
          })).setMimeType(ContentService.MimeType.JSON);
        }
      }
-     // Token belum terdaftar -> auto-register sekaligus redeem (mode loose)
+     // Token belum terdaftar -> auto-register sekaligus mark redeemed
      const now = new Date();
      sh.appendRow([token, name || '', '', now, now]);
      return ContentService.createTextOutput(JSON.stringify({
@@ -5349,7 +5360,6 @@ img[src$="loading.svg"] {
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      ensureAttendanceHeader_(sh);
      const data = sh.getDataRange().getValues();
-     // Kalau token sudah ada, tidak duplicate
      for (let i = 1; i < data.length; i++) {
        if (data[i][0] === token) {
          return ContentService.createTextOutput(JSON.stringify({
@@ -5357,31 +5367,18 @@ img[src$="loading.svg"] {
          })).setMimeType(ContentService.MimeType.JSON);
        }
      }
-     // Daftarkan token baru — registered_at terisi, redeemed_at kosong
      sh.appendRow([token, name || '', session || '', new Date(), '']);
      return ContentService.createTextOutput(JSON.stringify({
        success: true, registered: true
      })).setMimeType(ContentService.MimeType.JSON);
    }
-   function doPost(e) {
-     const data = JSON.parse(e.postData.contents);
-     const ss = SpreadsheetApp.getActiveSpreadsheet();
-     let sh = ss.getSheetByName('RSVP') || ss.insertSheet('RSVP');
-     if (sh.getLastRow() === 0) {
-       sh.appendRow(['timestamp','invitedTo','name','attendance','guests','session','message']);
-     }
-     sh.appendRow([new Date(), data.invitedTo||'', data.name||'',
-       data.attendance||'', data.guests||'', data.session||'', data.message||'']);
-     return ContentService.createTextOutput(JSON.stringify({ok:true}))
-       .setMimeType(ContentService.MimeType.JSON);
-   }
+
+   // ============ SHEET HELPERS (formatCell handle waktu & tanggal) ============
    function formatCell_(v) {
      // Sheets quirk:
-     //  - Cell "16:00" → Date 1899-12-30 → kita return "HH:mm"
-     //  - Cell tanggal via date picker → Date midnight di TZ sheet → kita
-     //    format Indonesia "D MMMM YYYY" (UPPERCASE) supaya cocok dengan
-     //    style cetak undangan
-     //  - Cell tanggal + waktu → ISO8601 dengan TZ supaya bisa di-parse
+     //  - Cell "16:00" -> Date 1899-12-30 -> return "HH:mm"
+     //  - Cell tanggal via date picker -> Date midnight -> format "D MMMM YYYY" Indonesia uppercase
+     //  - Cell tanggal + waktu -> ISO8601 dengan TZ supaya bisa di-parse
      if (!(v instanceof Date)) return v;
      const tz = Session.getScriptTimeZone() || 'Asia/Jakarta';
      const yr = parseInt(Utilities.formatDate(v, tz, 'yyyy'), 10);
@@ -5415,6 +5412,8 @@ img[src$="loading.svg"] {
      return r.slice(1).filter(row => row.some(c => c !== '' && c != null))
        .map(row => { const o = {}; h.forEach((k,i)=>o[k]=formatCell_(row[i])); return o; });
    }
+
+   // ============ CONTENT_DEFAULTS — semua tulisan/URL default undangan ============
    function CONTENT_DEFAULTS() {
      return [
        ['key', 'value'],
@@ -5518,6 +5517,7 @@ img[src$="loading.svg"] {
        ['gift.bank1.number_display', '7211 0863 95'],
        ['gift.bank1.number_raw', '7211086395'],
        ['gift.bank1.holder_label', 'a.n Cintya Febri Prasetyowati'],
+       ['gift.bank1.qris_image', ''],
        ['gift.bank1.thanks_photo', ''],
        ['gift.bank1.thanks_title', 'Matur Suwun'],
        ['gift.bank1.thanks_name', '— Cintya —'],
@@ -5525,6 +5525,7 @@ img[src$="loading.svg"] {
        ['gift.bank2.number_display', '1370 0099 8765'],
        ['gift.bank2.number_raw', '137000998765'],
        ['gift.bank2.holder_label', 'a.n Moh. Ilham Fathoni'],
+       ['gift.bank2.qris_image', ''],
        ['gift.bank2.thanks_photo', ''],
        ['gift.bank2.thanks_title', 'Matur Suwun'],
        ['gift.bank2.thanks_name', '— Fathoni —'],
