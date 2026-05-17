@@ -1600,6 +1600,137 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
   color: #eaf6ea;
   box-shadow: 0 4px 20px rgba(45,90,50,0.45), 0 0 0 1px rgba(142,209,142,0.25) inset;
 }
+/* ===== WA MENU MODAL ===== */
+.wa-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 3, 0.78);
+  z-index: 800;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.wa-menu-overlay.show { display: flex; }
+.wa-menu-card {
+  background: linear-gradient(180deg, var(--putih-tulang), var(--gading));
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  width: 100%;
+  max-width: 560px;
+  padding: 20px;
+  position: relative;
+  animation: waMenuPop 0.25s ease-out;
+}
+@keyframes waMenuPop {
+  from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.wa-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.wa-menu-header h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: var(--sogan-darkest);
+  margin: 0;
+}
+.wa-menu-close {
+  background: transparent;
+  border: 1px solid var(--sogan);
+  color: var(--sogan-darkest);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.wa-menu-close:hover { background: var(--sogan); color: var(--gading); }
+.wa-menu-hint {
+  font-size: 11px;
+  color: var(--sogan);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.wa-menu-search {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 6px;
+  background: var(--putih-tulang);
+  color: var(--sogan-darkest);
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+.wa-menu-search:focus {
+  outline: none;
+  border-color: var(--sogan);
+}
+.wa-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.wa-name-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 6px;
+  cursor: pointer;
+  background: #fff;
+  color: var(--sogan-darkest);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  gap: 2px;
+}
+.wa-name-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.wa-name-btn.has-phone {
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  border-color: #128C7E;
+}
+.wa-name-btn .wa-name-text {
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.wa-name-btn .wa-name-meta {
+  font-size: 10px;
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+}
+.wa-menu-footer {
+  font-size: 11px;
+  color: var(--sogan);
+  text-align: center;
+  margin: 12px 0 0;
+  font-style: italic;
+}
+
 #toast.toast-error {
   background: linear-gradient(135deg, #6a2727, #3f1414);
   border-color: #e08a8a;
@@ -3974,6 +4105,7 @@ img[src$="loading.svg"] {
     <p style="font-size: 12px; margin-bottom: 8px; color: var(--sogan);">Setiap tamu mendapat link unik dengan sesi yang sudah ditentukan. Bagikan via WhatsApp.</p>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
       <button class="add-btn" onclick="wablastAll()" style="flex:1;min-width:160px">Mulai WA Blast (semua No HP)</button>
+      <button class="add-btn" onclick="showWaMenu()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#25D366,#128C7E)">Menu Kirim per Nama</button>
       <button class="add-btn" onclick="copyAllWALinks()" style="flex:1;min-width:160px;background:linear-gradient(135deg,var(--sogan),var(--sogan-dark))">Copy semua link WA</button>
     </div>
     <p style="font-size:11px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
@@ -4454,6 +4586,22 @@ img[src$="loading.svg"] {
 </button>
 
 <div id="toast"></div>
+
+<!-- ====================================================
+     WA MENU MODAL — grid tombol nama tamu untuk quick send
+     ==================================================== -->
+<div id="wa-menu-overlay" class="wa-menu-overlay" onclick="hideWaMenu(event)">
+  <div class="wa-menu-card" onclick="event.stopPropagation()">
+    <div class="wa-menu-header">
+      <h3>Kirim Undangan via WhatsApp</h3>
+      <button class="wa-menu-close" onclick="hideWaMenu()" aria-label="Tutup">&times;</button>
+    </div>
+    <p class="wa-menu-hint">Klik nama tamu untuk buka WhatsApp dengan pesan undangan siap kirim. Tombol hijau = punya No HP (kirim langsung), tombol abu = pilih kontak manual.</p>
+    <input type="search" id="wa-menu-search" class="wa-menu-search" placeholder="Cari nama tamu..." oninput="filterWaMenu()">
+    <div id="wa-menu-grid" class="wa-menu-grid"></div>
+    <p class="wa-menu-footer" id="wa-menu-footer"></p>
+  </div>
+</div>
 
 <script>
 /* ============================================================================
@@ -5889,6 +6037,73 @@ function renderBlastStatus() {
       </div>
     </div>`;
 }
+
+/* =========================================================
+   WA MENU MODAL — quick send per nama
+   Buka modal dengan grid tombol nama tamu. Klik nama -> langsung
+   buka WA dengan pesan undangan untuk tamu itu.
+   ========================================================= */
+function showWaMenu() {
+  const guests = getGuestList();
+  if (guests.length === 0) {
+    showToast('Belum ada tamu. Tambah dulu di form atas.', 'error');
+    return;
+  }
+  renderWaMenu(guests);
+  const overlay = document.getElementById('wa-menu-overlay');
+  overlay.classList.add('show');
+  // Reset search
+  const search = document.getElementById('wa-menu-search');
+  if (search) { search.value = ''; search.focus(); }
+}
+
+function hideWaMenu(event) {
+  // Kalau dipanggil dari onclick overlay, hanya tutup kalau yg diklik
+  // overlay itu sendiri (bukan child card)
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('wa-menu-overlay').classList.remove('show');
+}
+
+function renderWaMenu(guests) {
+  const grid = document.getElementById('wa-menu-grid');
+  const footer = document.getElementById('wa-menu-footer');
+  if (!grid) return;
+  const withPhone = guests.filter(g => g.phone && g.phone.replace(/[^\d]/g, '').length >= 8).length;
+  footer.textContent = `${guests.length} tamu total · ${withPhone} dengan No HP (kirim langsung) · ${guests.length - withPhone} tanpa No HP (pilih kontak manual)`;
+  grid.innerHTML = guests.map((g, i) => {
+    const hasPhone = g.phone && g.phone.replace(/[^\d]/g, '').length >= 8;
+    return `
+      <button class="wa-name-btn ${hasPhone ? 'has-phone' : ''}" onclick="shareWA(${i}); hideWaMenu()" data-name="${escapeAttr(g.name.toLowerCase())}">
+        <span class="wa-name-text">${escapeHtml(g.name)}</span>
+        <span class="wa-name-meta">${escapeHtml(g.session)}${hasPhone ? ' · ' + escapeHtml(g.phone) : ' · (no HP)'}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function filterWaMenu() {
+  const search = document.getElementById('wa-menu-search');
+  const q = (search ? search.value : '').trim().toLowerCase();
+  const buttons = document.querySelectorAll('#wa-menu-grid .wa-name-btn');
+  let visible = 0;
+  buttons.forEach(btn => {
+    const name = btn.dataset.name || '';
+    const show = !q || name.includes(q);
+    btn.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const footer = document.getElementById('wa-menu-footer');
+  if (q) footer.textContent = `Cari "${q}": ${visible} tamu cocok`;
+  else renderWaMenu(getGuestList());  // restore footer
+}
+
+// Esc to close
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('wa-menu-overlay');
+    if (overlay && overlay.classList.contains('show')) hideWaMenu();
+  }
+});
 
 // Copy clipboard dengan HTML (untuk paste ke rich-text editor seperti Google
 // Docs / Word / Notion / Notes) DAN plain text (untuk fallback ke text-only).
