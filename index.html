@@ -1624,6 +1624,189 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
   color: #eaf6ea;
   box-shadow: 0 4px 20px rgba(45,90,50,0.45), 0 0 0 1px rgba(142,209,142,0.25) inset;
 }
+/* ===== GIFT BUTTON ROW (Salin + QRIS) ===== */
+.gift-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.gift-actions .copy-btn { margin: 0; flex: 1 1 auto; min-width: 130px; }
+.qris-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border: 1.5px solid var(--kuning-keemasan);
+  background: linear-gradient(135deg, var(--putih-tulang), var(--gading));
+  color: var(--sogan-darkest);
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.qris-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(58,32,15,0.2);
+  background: linear-gradient(135deg, var(--gading), var(--kuning-keemasan));
+}
+
+/* ===== QRIS MODAL — elegant wedding frame ===== */
+.qris-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 3, 0.85);
+  z-index: 880;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px 16px;
+  overflow-y: auto;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.qris-modal-overlay.show { display: flex; }
+.qris-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background:
+    radial-gradient(ellipse at top, rgba(245, 217, 138, 0.25), transparent 60%),
+    linear-gradient(180deg, var(--putih-tulang), var(--gading));
+  border: 2px solid var(--kuning-keemasan);
+  border-radius: 14px;
+  padding: 30px 24px 22px;
+  text-align: center;
+  box-shadow:
+    0 12px 50px rgba(0,0,0,0.5),
+    inset 0 0 0 1px rgba(255,235,180,0.5);
+  animation: waMenuPop 0.25s ease-out;
+}
+/* Dot accents 4 corners */
+.qris-modal-card::before,
+.qris-modal-card::after {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  background: var(--kuning-keemasan);
+  border-radius: 50%;
+}
+.qris-modal-card::before { top: 10px; left: 10px; box-shadow: calc(380px - 56px) 0 var(--kuning-keemasan); }
+.qris-modal-card::after { bottom: 10px; left: 10px; box-shadow: calc(380px - 56px) 0 var(--kuning-keemasan); }
+.qris-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 36px;
+  background: transparent;
+  border: 1px solid var(--sogan);
+  color: var(--sogan-darkest);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  z-index: 1;
+}
+.qris-modal-close:hover { background: var(--sogan); color: var(--gading); }
+.qris-modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--sogan-darkest);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.qris-modal-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+  color: var(--kuning-keemasan);
+}
+.qris-modal-divider span:first-child,
+.qris-modal-divider span:last-child {
+  display: inline-block;
+  height: 1px;
+  width: 60px;
+  background: var(--kuning-keemasan);
+}
+.qris-modal-diamond { font-size: 10px; }
+.qris-modal-holder {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--sogan-dark);
+  margin: 0 0 16px;
+  font-weight: 500;
+}
+.qris-modal-frame {
+  display: inline-block;
+  padding: 14px;
+  background: #fff;
+  border: 1.5px solid var(--kuning-keemasan);
+  border-radius: 8px;
+  margin: 6px auto 0;
+  box-shadow: 0 4px 14px rgba(58,32,15,0.18);
+  position: relative;
+}
+.qris-modal-frame::before,
+.qris-modal-frame::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--kuning-keemasan);
+}
+.qris-modal-frame::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.qris-modal-frame::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+.qris-modal-frame img {
+  display: block;
+  width: 280px;
+  height: 280px;
+  max-width: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+.qris-modal-hint {
+  font-size: 11.5px;
+  color: var(--sogan);
+  line-height: 1.6;
+  margin: 14px 0 0;
+  font-family: 'Cormorant Garamond', serif;
+}
+.qris-modal-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+.qris-modal-actions button {
+  flex: 1;
+  padding: 10px 14px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  border: 1px solid var(--kuning-keemasan);
+  background: var(--gading);
+  color: var(--sogan-darkest);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.qris-modal-actions button:first-child {
+  background: var(--sogan-darkest);
+  color: var(--gading);
+  border-color: var(--sogan);
+}
+
 /* ===== QR TICKET BUTTON & MODAL ===== */
 .qr-ticket-btn {
   display: inline-flex;
@@ -4728,7 +4911,12 @@ img[src$="loading.svg"] {
             <p class="gift-bank-logo" data-c="gift.bank1.name">BANK BCA</p>
             <p class="gift-account" data-c="gift.bank1.number_display">7211 0863 95</p>
             <p class="gift-name" data-c="gift.bank1.holder_label">a.n Cintya Febri Prasetyowati</p>
-            <button class="copy-btn" onclick="copyAndFlip(this.dataset.number || '7211086395', this); event.stopPropagation();" data-number="7211086395" data-c-attr="data-number:gift.bank1.number_raw"><span data-c="gift.copy_button">SALIN NOMOR</span></button>
+            <div class="gift-actions">
+              <button class="copy-btn" onclick="copyAndFlip(this.dataset.number || '7211086395', this); event.stopPropagation();" data-number="7211086395" data-c-attr="data-number:gift.bank1.number_raw"><span data-c="gift.copy_button">SALIN NOMOR</span></button>
+              <button class="qris-btn" data-bank="bank1" onclick="showQrisModal('bank1'); event.stopPropagation();" style="display:none" aria-label="Lihat QRIS">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm15-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>QRIS
+              </button>
+            </div>
           </div>
           <div class="gift-flip-back gift-card">
             <div class="thanks-portrait" data-c-bg="gift.bank1.thanks_photo" style="background-image: url('assets/bride-thanks.avif')"></div>
@@ -4747,7 +4935,12 @@ img[src$="loading.svg"] {
             <p class="gift-bank-logo" data-c="gift.bank2.name">BANK MANDIRI</p>
             <p class="gift-account" data-c="gift.bank2.number_display">1370 0099 8765</p>
             <p class="gift-name" data-c="gift.bank2.holder_label">a.n Moh. Ilham Fathoni</p>
-            <button class="copy-btn" onclick="copyAndFlip(this.dataset.number || '137000998765', this); event.stopPropagation();" data-number="137000998765" data-c-attr="data-number:gift.bank2.number_raw"><span data-c="gift.copy_button">SALIN NOMOR</span></button>
+            <div class="gift-actions">
+              <button class="copy-btn" onclick="copyAndFlip(this.dataset.number || '137000998765', this); event.stopPropagation();" data-number="137000998765" data-c-attr="data-number:gift.bank2.number_raw"><span data-c="gift.copy_button">SALIN NOMOR</span></button>
+              <button class="qris-btn" data-bank="bank2" onclick="showQrisModal('bank2'); event.stopPropagation();" style="display:none" aria-label="Lihat QRIS">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm15-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>QRIS
+              </button>
+            </div>
           </div>
           <div class="gift-flip-back gift-card">
             <div class="thanks-portrait" data-c-bg="gift.bank2.thanks_photo" style="background-image: url('assets/groom-thanks.avif')"></div>
@@ -4882,6 +5075,31 @@ img[src$="loading.svg"] {
 </button>
 
 <div id="toast"></div>
+
+<!-- ====================================================
+     QRIS MODAL — tampil gambar QRIS untuk pembayaran cashless
+     ==================================================== -->
+<div id="qris-modal-overlay" class="qris-modal-overlay" onclick="hideQrisModal(event)">
+  <div class="qris-modal-card" onclick="event.stopPropagation()">
+    <button class="qris-modal-close" onclick="hideQrisModal()" aria-label="Tutup">&times;</button>
+    <h3 class="qris-modal-title">QRIS PEMBAYARAN</h3>
+    <div class="qris-modal-divider">
+      <span></span><span class="qris-modal-diamond">◆</span><span></span>
+    </div>
+    <p class="qris-modal-holder" id="qris-modal-holder">—</p>
+    <div class="qris-modal-frame">
+      <img id="qris-modal-image" src="" alt="QRIS" decoding="async">
+    </div>
+    <p class="qris-modal-hint">
+      Scan QRIS di atas dengan aplikasi <strong>e-wallet</strong> (GoPay, OVO, DANA, ShopeePay, dll)
+      atau <strong>mobile banking</strong> apapun yang mendukung QRIS.
+    </p>
+    <div class="qris-modal-actions">
+      <button onclick="downloadQrisImage()">Simpan Gambar</button>
+      <button onclick="hideQrisModal()">Tutup</button>
+    </div>
+  </div>
+</div>
 
 <!-- ====================================================
      QR TICKET MODAL — tampil QR per tamu untuk pengambilan souvenir
@@ -5570,6 +5788,8 @@ function applyConfigOverrides(map) {
   // Setelah konten siap, mulai pre-buffer audio di background supaya pas user
   // klik "Buka Undangan" nanti, audio sudah siap putar tanpa stutter.
   preloadAudio();
+  // Tombol QRIS muncul/sembunyi sesuai apakah URL QRIS image ada di sheet
+  if (typeof applyQrisVisibility === 'function') applyQrisVisibility();
 }
 
 function preloadAudio() {
@@ -6519,6 +6739,65 @@ function renderBlastStatus() {
         <button class="mini-btn" onclick="wablastCancel()" style="background:#a04040">Batal</button>
       </div>
     </div>`;
+}
+
+/* =========================================================
+   QRIS MODAL — tampil QRIS image dari URL spreadsheet
+   Key sheet: gift.bank1.qris_image, gift.bank2.qris_image (URL gambar QRIS)
+   Tombol QRIS auto-muncul di kartu bank kalau URL ter-isi.
+   ========================================================= */
+let _qrisCurrentBank = '';
+
+function applyQrisVisibility() {
+  ['bank1', 'bank2'].forEach(bank => {
+    const url = (SHEET_CONTENT_MAP && SHEET_CONTENT_MAP['gift.' + bank + '.qris_image']) || '';
+    document.querySelectorAll('.qris-btn[data-bank="' + bank + '"]').forEach(btn => {
+      btn.style.display = url ? 'inline-flex' : 'none';
+    });
+  });
+}
+
+function showQrisModal(bank) {
+  _qrisCurrentBank = bank;
+  const url = (SHEET_CONTENT_MAP && SHEET_CONTENT_MAP['gift.' + bank + '.qris_image']) || '';
+  if (!url) {
+    showToast('QRIS belum tersedia untuk bank ini', 'error');
+    return;
+  }
+  const holder = (SHEET_CONTENT_MAP && SHEET_CONTENT_MAP['gift.' + bank + '.holder_label']) || '';
+  document.getElementById('qris-modal-holder').textContent = holder || '—';
+  const img = document.getElementById('qris-modal-image');
+  img.src = normalizeImageUrl(url);
+  document.getElementById('qris-modal-overlay').classList.add('show');
+}
+
+function hideQrisModal(event) {
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('qris-modal-overlay').classList.remove('show');
+}
+
+function downloadQrisImage() {
+  const img = document.getElementById('qris-modal-image');
+  if (!img.src) return;
+  // Fetch lalu trigger download (kalau CORS allow). Fall back: buka di tab baru
+  fetch(img.src, { mode: 'cors' })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'qris-' + (_qrisCurrentBank || 'pembayaran') + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✓ QRIS ter-download', 'success');
+    })
+    .catch(() => {
+      // CORS block atau error — buka di tab baru supaya user bisa save manual
+      window.open(img.src, '_blank');
+      showToast('Tab baru terbuka — long-press / klik kanan gambar → "Save image as"', 'success');
+    });
 }
 
 /* =========================================================
