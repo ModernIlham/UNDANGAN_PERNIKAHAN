@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgb(250,240,216)"/>
+      <stop offset="100%" stop-color="rgb(232,212,168)"/>
+    </linearGradient>
+    <filter id="goldglow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Top decorative line -->
+  <line x1="100" y1="80" x2="1100" y2="80" stroke="rgb(212,175,100)" stroke-width="3">
+    <animate attributeName="stroke-opacity" values="0.4;1;0.4" dur="3s" repeatCount="indefinite"/>
+  </line>
+  <!-- Bottom decorative line -->
+  <line x1="100" y1="550" x2="1100" y2="550" stroke="rgb(212,175,100)" stroke-width="3">
+    <animate attributeName="stroke-opacity" values="0.4;1;0.4" dur="3s" repeatCount="indefinite" begin="1.5s"/>
+  </line>
+
+  <!-- Dots at corners -->
+  <circle cx="100" cy="80" r="8" fill="rgb(212,175,100)">
+    <animate attributeName="r" values="6;10;6" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1100" cy="80" r="8" fill="rgb(212,175,100)">
+    <animate attributeName="r" values="6;10;6" dur="2.5s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+  <circle cx="100" cy="550" r="8" fill="rgb(212,175,100)">
+    <animate attributeName="r" values="6;10;6" dur="2.5s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+  <circle cx="1100" cy="550" r="8" fill="rgb(212,175,100)">
+    <animate attributeName="r" values="6;10;6" dur="2.5s" repeatCount="indefinite" begin="1.5s"/>
+  </circle>
+
+  <!-- THE WEDDING OF -->
+  <text x="600" y="180" text-anchor="middle" font-family="Georgia, serif" font-size="40" font-weight="600" fill="rgb(107,61,28)" letter-spacing="6">
+    THE WEDDING OF
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="4s" repeatCount="indefinite"/>
+  </text>
+
+  <!-- Names -->
+  <text x="600" y="340" text-anchor="middle" font-family="Georgia, serif" font-size="130" font-weight="700" fill="rgb(21,10,3)" filter="url(#goldglow)">
+    Cintya &amp; Fathoni
+  </text>
+
+  <!-- Center ornament -->
+  <line x1="400" y1="410" x2="570" y2="410" stroke="rgb(212,175,100)" stroke-width="2"/>
+  <line x1="630" y1="410" x2="800" y2="410" stroke="rgb(212,175,100)" stroke-width="2"/>
+  <circle cx="600" cy="410" r="7" fill="none" stroke="rgb(212,175,100)" stroke-width="2">
+    <animateTransform attributeName="transform" type="rotate" from="0 600 410" to="360 600 410" dur="20s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Date -->
+  <text x="600" y="490" text-anchor="middle" font-family="Georgia, serif" font-size="55" font-weight="600" fill="rgb(107,61,28)" letter-spacing="8">
+    21  ·  06  ·  2026
+  </text>
+
+  <!-- Tagline -->
+  <text x="600" y="570" text-anchor="middle" font-family="Georgia, serif" font-size="26" fill="rgb(212,175,100)" letter-spacing="6">
+    WEDDING INVITATION
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite" begin="2s"/>
+  </text>
+</svg>
