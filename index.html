@@ -5684,17 +5684,23 @@ function normalizePhone(p) {
   return n;
 }
 
-// Template pesan WA — panjang, sopan, ambil konten dinamis dari sheet kalau ada
-function buildWAMessage(name, link) {
+// Template pesan WA — panjang, sopan, ambil konten dinamis dari sheet kalau ada.
+// Parameter session WAJIB diisi supaya tamu tahu sesi mana yg mereka diundang.
+function buildWAMessage(name, link, session) {
   const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
   const coupleShort = m['cover.names']            || 'Cintya & Fathoni';
   const brideFull   = m['couple.bride.name_full'] || 'Cintya Febri Prasetyowati';
   const groomFull   = m['couple.groom.name_full'] || 'Moh. Ilham Fathoni';
   const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
   const venue       = stripHtml(m['events.akad.venue_html']) || 'Hotel Styvie Surabaya';
+  // Ambil label sesi lengkap dari CONFIG.sessionLabels (mis. "Resepsi Sesi 2 -
+  // Tamu Undangan (20:00 - 21:00 WIB)"). Fall back ke nilai session apa adanya
+  // kalau key tidak ditemukan.
+  const sessionLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session])
+    || session || '-';
   // NOTE: emoji disengaja pakai yang selalu ter-render sbg color emoji
-  // (bukan U+1F5D3 'calendar text' yg butuh variation selector & sering
-  // muncul sebagai '?' / kotak / replacement char di font lama).
+  // (📅 📍 🎫 — semua color emoji universal). Hindari emoji text-variant
+  // (mis. U+1F5D3 calendar text) yg sering muncul sebagai '?' / kotak.
   return (
 `Assalamu'alaikum Warahmatullahi Wabarakatuh
 
@@ -5708,6 +5714,7 @@ Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud mengundang Bapak/Ibu/S
 
 📅  Tanggal: ${eventDate}
 📍  Tempat: ${venue}
+🎫  Sesi Anda: *${sessionLabel}*
 
 Detail lengkap susunan acara, denah lokasi, serta konfirmasi kehadiran (RSVP) dapat dilihat melalui undangan digital berikut:
 
@@ -5731,7 +5738,7 @@ function shareWA(idx) {
   if (!g) return;
   const baseUrl = window.location.origin + window.location.pathname;
   const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
-  const msg = buildWAMessage(g.name, link);
+  const msg = buildWAMessage(g.name, link, g.session);
   const phone = g.phone ? normalizePhone(g.phone) : '';
   const waUrl = phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
@@ -5767,7 +5774,7 @@ function wablastNext() {
   const baseUrl = window.location.origin + window.location.pathname;
   const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
   const phone = normalizePhone(g.phone);
-  const msg = buildWAMessage(g.name, link);
+  const msg = buildWAMessage(g.name, link, g.session);
   const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   const w = window.open(waUrl, '_blank');
   if (!w) {
@@ -5823,8 +5830,27 @@ function renderBlastStatus() {
     </div>`;
 }
 
-// Copy semua link WA ke clipboard sebagai TSV (Nama | No HP | Sesi | WA URL).
-// Berguna untuk paste ke Google Sheets / Excel sebagai log pengiriman.
+// Copy clipboard dengan HTML (untuk paste ke rich-text editor seperti Google
+// Docs / Word / Notion / Notes) DAN plain text (untuk fallback ke text-only).
+function copyToClipboardHTML(html, plainText) {
+  if (navigator.clipboard && window.isSecureContext && typeof ClipboardItem !== 'undefined') {
+    try {
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([plainText], { type: 'text/plain' })
+      });
+      return navigator.clipboard.write([item]);
+    } catch (e) {
+      // Lanjut ke fallback di bawah
+    }
+  }
+  return copyToClipboard(plainText);
+}
+
+// Copy semua tamu sebagai daftar nama CLICKABLE (HTML hyperlink). Saat di-paste
+// ke Google Docs / Word / Notion / Notes / Email → tiap nama jadi link yg bisa
+// langsung diklik buka tab WA siap kirim. Fallback plain text bernomor untuk
+// tekstapps yang tidak terima HTML.
 function copyAllWALinks() {
   const guests = getGuestList();
   if (guests.length === 0) {
@@ -5832,19 +5858,33 @@ function copyAllWALinks() {
     return;
   }
   const baseUrl = window.location.origin + window.location.pathname;
-  const lines = guests.map(g => {
+  const items = guests.map(g => {
     const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
     const phone = g.phone ? normalizePhone(g.phone) : '';
-    const msg = buildWAMessage(g.name, link);
+    const msg = buildWAMessage(g.name, link, g.session);
     const waUrl = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    return `${g.name}\t${g.phone || ''}\t${g.session}\t${waUrl}`;
+    return { name: g.name, session: g.session, hasPhone: !!phone, waUrl };
   });
-  const text = ['Nama\tNo HP\tSesi\tWA Link', ...lines].join('\n');
-  copyToClipboard(text)
-    .then(() => showToast(`${guests.length} link WA tersalin. Paste ke Sheet/Excel.`, 'success'))
-    .catch(() => showToast('Gagal menyalin link. Coba browser lain.', 'error'));
+
+  // HTML: daftar nama jadi hyperlink, dengan tag sesi di belakang
+  const htmlList =
+    '<ol style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7">' +
+    items.map(it => {
+      const tag = it.hasPhone ? '' : ' (pilih kontak manual)';
+      return `<li><a href="${escapeAttr(it.waUrl)}">${escapeHtml(it.name)}</a> — <em>${escapeHtml(it.session)}</em>${tag}</li>`;
+    }).join('') +
+    '</ol>';
+
+  // Plain text fallback: nomor + nama + sesi + URL di baris bawahnya
+  const plainList = items.map((it, i) =>
+    `${i + 1}. ${it.name} — ${it.session}${it.hasPhone ? '' : ' (no phone)'}\n   ${it.waUrl}`
+  ).join('\n\n');
+
+  copyToClipboardHTML(htmlList, plainList)
+    .then(() => showToast(`${items.length} nama tersalin. Paste ke Google Docs / Word / Notes — tiap nama bisa diklik.`, 'success'))
+    .catch(() => showToast('Gagal menyalin. Coba browser lain (Chrome/Edge).', 'error'));
 }
 
 function exportCSV() {
