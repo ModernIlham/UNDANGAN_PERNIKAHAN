@@ -4369,6 +4369,12 @@ img[src$="loading.svg"] {
       <button class="mini-btn" onclick="window.open(getScannerUrl(),'_blank')">Buka</button>
       <button class="mini-btn" onclick="shareScannerUrlWA()" style="background:#25D366;color:#fff">Kirim WA</button>
     </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #25D366">
+      <strong style="font-size:12px;color:#128C7E">🔧 Diagnostic</strong>
+      <p style="font-size:11px;color:#1a4d2e;margin:4px 0 6px">Test koneksi Apps Script — kirim test redeem, tampilkan respons real dari server.</p>
+      <button class="mini-btn" onclick="testScannerEndpoint()" style="background:#0d3d1d;color:#fff">▶ Test Konek Scanner</button>
+      <div id="scanner-test-result" style="margin-top:8px"></div>
+    </div>
   </div>
 
   <!-- LINK PER TAMU -->
@@ -4984,9 +4990,12 @@ img[src$="loading.svg"] {
    function setupAttendanceSheet_(ss) {
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','redeemed_at','first_seen_name']);
-       sh.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
+       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
        sh.setFrozenRows(1);
+       sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 240);
+       sh.setColumnWidth(3, 100); sh.setColumnWidth(4, 160);
+       sh.setColumnWidth(5, 160);
      }
    }
    function resetContentDefaults() {
@@ -5041,6 +5050,10 @@ img[src$="loading.svg"] {
      if (params.action === 'redeem') {
        return redeemToken(params.token, params.name, params.key);
      }
+     // Action: register token (admin sync tamu ke sheet, sebelum acara)
+     if (params.action === 'register') {
+       return registerToken(params.token, params.name, params.session, params.key);
+     }
      // Default: return semua konten + attendance (untuk badge "Sudah Hadir")
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      const out = {
@@ -5051,12 +5064,18 @@ img[src$="loading.svg"] {
      return ContentService.createTextOutput(JSON.stringify(out))
        .setMimeType(ContentService.MimeType.JSON);
    }
+   // Schema Attendance: ['token','name','session','registered_at','redeemed_at']
+   function ensureAttendanceHeader_(sh) {
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
+       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.setFrozenRows(1);
+     }
+   }
    function redeemToken(token, name, key) {
-     // Wajib validasi kunci scanner — cegah random user redeem QR
      if (!key || key !== SCANNER_KEY) {
        return ContentService.createTextOutput(JSON.stringify({
-         success: false,
-         error: 'Unauthorized: scanner key tidak valid'
+         success: false, error: 'Unauthorized: scanner key tidak valid'
        })).setMimeType(ContentService.MimeType.JSON);
      }
      if (!token) {
@@ -5065,29 +5084,65 @@ img[src$="loading.svg"] {
      }
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-     if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','redeemed_at','first_seen_name']);
-     }
-     // Cek apakah token sudah ada
+     ensureAttendanceHeader_(sh);
      const data = sh.getDataRange().getValues();
+     // Cari token di tabel
      for (let i = 1; i < data.length; i++) {
        if (data[i][0] === token) {
+         const redeemedAt = data[i][4];  // column E
+         if (redeemedAt) {
+           // Sudah pernah redeem
+           return ContentService.createTextOutput(JSON.stringify({
+             success: true, alreadyRedeemed: true,
+             name: data[i][1] || name || '',
+             timestamp: new Date(redeemedAt).toISOString()
+           })).setMimeType(ContentService.MimeType.JSON);
+         }
+         // Token registered tapi belum redeem -> mark redeemed
+         const now = new Date();
+         sh.getRange(i + 1, 5).setValue(now);
          return ContentService.createTextOutput(JSON.stringify({
-           success: true,
-           alreadyRedeemed: true,
-           name: data[i][1] || data[i][3] || name || '',
-           timestamp: data[i][2] ? new Date(data[i][2]).toISOString() : ''
+           success: true, alreadyRedeemed: false,
+           name: data[i][1] || name || '',
+           timestamp: now.toISOString()
          })).setMimeType(ContentService.MimeType.JSON);
        }
      }
-     // First redeem — append
+     // Token belum terdaftar -> auto-register sekaligus redeem (mode loose)
      const now = new Date();
-     sh.appendRow([token, name || '', now, name || '']);
+     sh.appendRow([token, name || '', '', now, now]);
      return ContentService.createTextOutput(JSON.stringify({
-       success: true,
-       alreadyRedeemed: false,
-       name: name || '',
-       timestamp: now.toISOString()
+       success: true, alreadyRedeemed: false,
+       name: name || '', timestamp: now.toISOString()
+     })).setMimeType(ContentService.MimeType.JSON);
+   }
+   function registerToken(token, name, session, key) {
+     if (!key || key !== SCANNER_KEY) {
+       return ContentService.createTextOutput(JSON.stringify({
+         success: false, error: 'Unauthorized'
+       })).setMimeType(ContentService.MimeType.JSON);
+     }
+     if (!token) {
+       return ContentService.createTextOutput(JSON.stringify({
+         success: false, error: 'no token'
+       })).setMimeType(ContentService.MimeType.JSON);
+     }
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
+     ensureAttendanceHeader_(sh);
+     const data = sh.getDataRange().getValues();
+     // Kalau token sudah ada, tidak duplicate
+     for (let i = 1; i < data.length; i++) {
+       if (data[i][0] === token) {
+         return ContentService.createTextOutput(JSON.stringify({
+           success: true, alreadyRegistered: true
+         })).setMimeType(ContentService.MimeType.JSON);
+       }
+     }
+     // Daftarkan token baru — registered_at terisi, redeemed_at kosong
+     sh.appendRow([token, name || '', session || '', new Date(), '']);
+     return ContentService.createTextOutput(JSON.stringify({
+       success: true, registered: true
      })).setMimeType(ContentService.MimeType.JSON);
    }
    function doPost(e) {
@@ -6951,6 +7006,92 @@ function shareScannerUrlWA() {
   const url = getScannerUrl();
   const msg = `Halo, ini link scanner untuk penerima tamu / petugas souvenir di pernikahan Cintya & Fathoni:\n\n${url}\n\nCara pakai:\n1. Buka link di HP\n2. Izinkan akses kamera\n3. Arahkan ke QR e-tiket tamu yang datang\n4. Sistem otomatis validasi - kalau hijau (VALID), beri souvenir. Kalau kuning (SUDAH DIPAKAI), tolak.\n\nSimpan link ini di favorit HP. Jangan share ke selain staff.`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+/* ===== TEST KONEK SCANNER — diagnostic untuk debug Apps Script ===== */
+async function testScannerEndpoint() {
+  const out = document.getElementById('scanner-test-result');
+  const setOut = (html) => { if (out) out.innerHTML = html; };
+
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) {
+    setOut('<div style="color:#a04040;font-size:12px;background:#fff;padding:8px;border-radius:4px">' +
+      '<strong>✗ ERROR:</strong> CONFIG.SHEET_DATA_URL dan CONFIG.GOOGLE_SCRIPT_URL kosong. Set salah satu di HTML dulu.</div>');
+    return;
+  }
+  const key = CONFIG.scannerKey || '';
+  const testToken = 'TEST-' + Date.now().toString(36).toUpperCase();
+  const testName = 'Test Scan ' + new Date().toLocaleTimeString('id-ID');
+  const fullUrl = baseUrl +
+    '?action=redeem&token=' + encodeURIComponent(testToken) +
+    '&name=' + encodeURIComponent(testName) +
+    '&key=' + encodeURIComponent(key);
+
+  setOut('<div style="color:#1a4d2e;font-size:12px;background:#fff;padding:8px;border-radius:4px">' +
+    '<em>⏳ Memanggil server...</em><br><br>' +
+    '<strong>URL yang dipanggil:</strong><br><code style="background:#f5f5f5;padding:4px;font-size:10px;word-break:break-all;display:block">' + escapeHtml(fullUrl) + '</code></div>');
+
+  try {
+    const t0 = Date.now();
+    const res = await fetch(fullUrl, { cache: 'no-store' });
+    const elapsed = Date.now() - t0;
+    const contentType = res.headers.get('Content-Type') || '(no content-type)';
+    const responseText = await res.text();
+    let json = null;
+    try { json = JSON.parse(responseText); } catch (e) {}
+
+    let html = '<div style="font-size:12px;background:#fff;padding:8px;border-radius:4px;color:#1a4d2e">';
+    html += `<strong>HTTP ${res.status}</strong> · ${elapsed}ms · Content-Type: <code>${escapeHtml(contentType)}</code><br><br>`;
+    html += `<strong>Raw response (${responseText.length} chars):</strong><br>`;
+    html += `<code style="background:#f5f5f5;padding:4px;font-size:10px;word-break:break-all;display:block;max-height:120px;overflow:auto">${escapeHtml(responseText.slice(0, 600))}${responseText.length > 600 ? '\n... (' + (responseText.length - 600) + ' char more)' : ''}</code>`;
+
+    if (!res.ok) {
+      html += `<br><div style="color:#a04040"><strong>✗ HTTP error ${res.status}</strong> — kemungkinan: deployment Web App access bukan "Anyone".</div>`;
+    } else if (!json) {
+      html += '<br><div style="color:#a04040"><strong>✗ Response BUKAN JSON valid</strong> — Apps Script kemungkinan throw error. Buka Apps Script editor → View → Executions, lihat error terbaru.</div>';
+    } else if (json.content !== undefined || json.gallery !== undefined) {
+      html += '<br><div style="color:#a04040;background:#ffeeee;padding:6px;border-radius:4px;border-left:3px solid #a04040">' +
+        '<strong>✗ APPS SCRIPT BELUM DI-UPDATE!</strong><br>' +
+        'Response berisi <code>content</code>/<code>gallery</code> = doGet pakai versi LAMA yang tidak handle <code>?action=redeem</code>.<br><br>' +
+        '<strong>Fix step-by-step:</strong><br>' +
+        '1. Buka Sheet → Extensions → <strong>Apps Script</strong><br>' +
+        '2. Pastikan ada baris: <code>const SCANNER_KEY = \'' + escapeHtml(key) + '\';</code> di awal<br>' +
+        '3. Pastikan ada function <code>redeemToken(token, name, key)</code><br>' +
+        '4. Pastikan <code>doGet(e)</code> punya: <code>if (params.action === \'redeem\') return redeemToken(...);</code><br>' +
+        '5. Save (Ctrl+S)<br>' +
+        '6. <strong>Deploy → Manage deployments → klik pencil ✏️ → Version: New version → Deploy</strong><br>' +
+        '   (PENTING: bukan "New deployment" yang bikin URL baru — pakai "New version" di deployment yang sama)<br>' +
+        '7. Test lagi tombol ini' +
+        '</div>';
+    } else if (json.success === false && /unauthor/i.test(json.error || '')) {
+      html += `<br><div style="color:#a04040;background:#ffeeee;padding:6px;border-radius:4px;border-left:3px solid #a04040">` +
+        '<strong>✗ Unauthorized — SCANNER_KEY tidak match</strong><br><br>' +
+        `Apps Script <code>SCANNER_KEY</code> ≠ HTML <code>CONFIG.scannerKey</code>.<br>` +
+        `Sekarang HTML pakai: <code style="background:#fff">${escapeHtml(key)}</code><br>` +
+        'Buka Apps Script → cari baris <code>const SCANNER_KEY = ...</code> → pastikan VALUE SAMA persis dengan HTML.<br>' +
+        'Save → Deploy → Manage deployments → Edit → New version → Deploy.' +
+        '</div>';
+    } else if (json.success) {
+      html += `<br><div style="color:#0d6b1d;background:#eeffee;padding:8px;border-radius:4px;border-left:3px solid #25D366">` +
+        `<strong>✓ APPS SCRIPT JALAN BENAR!</strong><br><br>` +
+        `Test token <code>${escapeHtml(testToken)}</code> berhasil di-${json.alreadyRedeemed ? 'detect sudah dipakai' : 'register & redeem'}.<br><br>` +
+        `<strong>Sekarang BUKA TAB "Attendance" di Google Sheet Anda</strong> — harus ada row baru dengan:<br>` +
+        `&nbsp;&nbsp;• token: <code>${escapeHtml(testToken)}</code><br>` +
+        `&nbsp;&nbsp;• name: <code>${escapeHtml(testName)}</code><br>` +
+        `&nbsp;&nbsp;• redeemed_at: timestamp baru saja<br><br>` +
+        `Kalau ada row tersebut → sistem 100% jalan, scan QR asli pasti tercatat.<br>` +
+        `Kalau tidak ada → mungkin Anda buka tab Attendance di Sheet BERBEDA (cek URL Apps Script vs URL Sheet).` +
+        '</div>';
+    } else {
+      html += `<br><div style="color:#a04040"><strong>✗ success: false</strong> — error: ${escapeHtml(json.error || '?')}</div>`;
+    }
+    html += '</div>';
+    setOut(html);
+  } catch (e) {
+    setOut('<div style="color:#a04040;font-size:12px;background:#fff;padding:8px;border-radius:4px">' +
+      '<strong>✗ Network error:</strong> ' + escapeHtml(String(e)) + '<br><br>' +
+      'Kemungkinan: koneksi internet putus, atau Apps Script Web App URL salah/expired.</div>');
+  }
 }
 
 /* =========================================================
