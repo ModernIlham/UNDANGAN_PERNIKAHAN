@@ -4352,19 +4352,19 @@ img[src$="loading.svg"] {
   </div>
 
   <!-- LINK SCANNER PENERIMA TAMU (untuk staff souvenir) -->
-  <div class="admin-section" style="border:1px solid #25D366;background:rgba(37,211,102,0.05)">
-    <h3>📷 LINK SCANNER PENERIMA TAMU</h3>
-    <p style="font-size:12px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
+  <div class="admin-section" style="border:2px solid #25D366;background:linear-gradient(180deg,#f0fff5,#e3f8ec);color:#0d3d1d;position:relative;z-index:1">
+    <h3 style="color:#128C7E">📷 LINK SCANNER PENERIMA TAMU</h3>
+    <p style="font-size:12px;color:#1a4d2e;margin-bottom:8px;line-height:1.5;font-weight:500">
       Bagikan link ini <strong>HANYA ke staff penerima tamu / petugas souvenir</strong>.
       Mereka buka link di HP → izinkan kamera → scan QR e-tiket tamu yang datang →
       sistem otomatis validasi (✓ valid / ⚠ sudah dipakai) → data masuk ke tab "Attendance" di sheet.
     </p>
-    <p style="font-size:11px;color:var(--sogan);margin-bottom:8px">
-      ⚠️ Jangan kasih link ini ke tamu — mereka bisa "menggesek" QR sendiri sebelum acara.
-      Untuk ganti kunci akses, edit <code>CONFIG.scannerKey</code> di HTML &amp; <code>SCANNER_KEY</code> di Apps Script.
+    <p style="font-size:11px;color:#7a3d00;margin-bottom:8px;background:#fff8e1;padding:6px 8px;border-radius:4px;border-left:3px solid #d2a857">
+      ⚠️ <strong>Jangan kasih link ini ke tamu</strong> — mereka bisa "menggesek" QR sendiri sebelum acara.
+      Untuk ganti kunci akses, edit <code style="background:#fff;padding:1px 4px;border-radius:2px;font-size:10px">CONFIG.scannerKey</code> di HTML &amp; <code style="background:#fff;padding:1px 4px;border-radius:2px;font-size:10px">SCANNER_KEY</code> di Apps Script.
     </p>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
-      <code id="scanner-url-display" style="flex:1;min-width:240px;padding:8px 10px;background:#fff;border:1px solid var(--kuning-keemasan);border-radius:4px;font-size:11px;word-break:break-all;color:var(--sogan-darkest)"></code>
+      <code id="scanner-url-display" style="flex:1;min-width:240px;padding:8px 10px;background:#fff;border:1px solid #25D366;border-radius:4px;font-size:11px;word-break:break-all;color:#0d3d1d;font-family:'Courier New',monospace"></code>
       <button class="mini-btn" onclick="copyScannerUrl()" style="background:#25D366;color:#fff">Copy Link</button>
       <button class="mini-btn" onclick="window.open(getScannerUrl(),'_blank')">Buka</button>
       <button class="mini-btn" onclick="shareScannerUrlWA()" style="background:#25D366;color:#fff">Kirim WA</button>
