@@ -3921,6 +3921,7 @@ img[src$="loading.svg"] {
     <h3>👥 TAMBAH TAMU UNDANGAN</h3>
     <div class="admin-input-row">
       <input class="admin-input" id="new-guest-name" placeholder="Nama tamu (ex: Bapak Budi Santoso)">
+      <input class="admin-input" id="new-guest-phone" placeholder="No HP (08xx / 628xx — opsional)" inputmode="tel">
       <select class="admin-select" id="new-guest-session">
         <option value="Akad">Akad Nikah (16:00 - 17:00)</option>
         <option value="Sesi 1">Resepsi Sesi 1 - Tamu Undangan (18:30 - 19:30)</option>
@@ -3929,12 +3930,22 @@ img[src$="loading.svg"] {
       </select>
       <button class="add-btn" onclick="addGuest()">+ TAMBAH & GENERATE LINK</button>
     </div>
+    <p style="font-size:11px;color:var(--sogan);margin-top:6px;line-height:1.5">
+      💡 Tip: isi <strong>No HP</strong> untuk bisa kirim WA langsung ke nomor itu (tanpa pilih kontak manual). Format apa saja: 0812..., 62812..., +62 812..., bebas — auto di-format ke 62 format.
+    </p>
   </div>
 
   <!-- LINK PER TAMU -->
   <div class="admin-section">
     <h3>🔗 LINK UNDANGAN PER TAMU</h3>
     <p style="font-size: 12px; margin-bottom: 8px; color: var(--sogan);">Setiap tamu mendapat link unik dengan sesi yang sudah ditentukan. Bagikan via WhatsApp.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="add-btn" onclick="wablastAll()" style="flex:1;min-width:160px">📤 WA BLAST (semua nomor HP)</button>
+      <button class="add-btn" onclick="copyAllWALinks()" style="flex:1;min-width:160px;background:linear-gradient(135deg,var(--sogan),var(--sogan-dark))">📋 COPY SEMUA LINK WA</button>
+    </div>
+    <p style="font-size:11px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
+      ⚠️ <strong>WA Blast</strong> akan buka tab WhatsApp Web untuk tiap tamu yang punya nomor (delay 2 detik). Pastikan <strong>popup diizinkan</strong> di browser ini. Di setiap tab tinggal klik tombol Send.
+    </p>
     <div id="admin-guest-links"></div>
   </div>
 </div>
@@ -5567,16 +5578,27 @@ function getGuestList() {
 function addGuest() {
   const name = document.getElementById('new-guest-name').value.trim();
   const session = document.getElementById('new-guest-session').value;
+  const phoneEl = document.getElementById('new-guest-phone');
+  const phone = phoneEl ? phoneEl.value.trim() : '';
   if (!name) {
-    showToast('Mohon isi nama tamu');
+    showToast('Mohon isi nama tamu', 'error');
     return;
   }
   const guests = getGuestList();
-  guests.push({ name, session });
+  guests.push({ name, session, phone });
   localStorage.setItem('guests_cf', JSON.stringify(guests));
   document.getElementById('new-guest-name').value = '';
+  if (phoneEl) phoneEl.value = '';
   renderGuestLinks();
-  showToast('Tamu ditambahkan');
+  showToast('Tamu ditambahkan', 'success');
+}
+
+function updateGuestPhone(idx, newPhone) {
+  const guests = getGuestList();
+  if (!guests[idx]) return;
+  guests[idx].phone = String(newPhone || '').trim();
+  localStorage.setItem('guests_cf', JSON.stringify(guests));
+  // Tidak re-render — supaya focus input tidak hilang saat user mengetik
 }
 
 function deleteGuest(idx) {
@@ -5605,6 +5627,9 @@ function renderGuestLinks() {
   c.innerHTML = guests.map((g, i) => {
     const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
     const safeLink = link.replace(/'/g, "\\'");
+    const hasPhone = g.phone && g.phone.replace(/[^\d]/g, '').length >= 8;
+    const waBtnStyle = hasPhone ? 'background:#25D366;color:#fff' : '';
+    const waLabel    = hasPhone ? '📱 WA' : 'WA';
     return `
       <div class="admin-guest-link">
         <div class="guest-info">
@@ -5615,11 +5640,12 @@ function renderGuestLinks() {
             <option value="Sesi 2" ${g.session === 'Sesi 2' ? 'selected' : ''}>Sesi 2 - Tamu Undangan (20:00)</option>
             <option value="Akad + Resepsi" ${g.session === 'Akad + Resepsi' ? 'selected' : ''}>Akad + Resepsi</option>
           </select>
+          <input type="tel" inputmode="tel" onchange="updateGuestPhone(${i}, this.value)" value="${escapeHtml(g.phone || '')}" placeholder="No HP (08xx / 628xx)" style="font-size:11px;padding:3px 6px;margin:3px 0;border:1px solid #ccc;border-radius:3px;width:100%;font-family:inherit;box-sizing:border-box;">
           <span class="guest-link-url">${link}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           <button class="mini-btn" onclick="copyLink('${safeLink}')">Copy</button>
-          <button class="mini-btn" onclick="shareWA('${safeLink}', '${escapeHtml(g.name).replace(/'/g,"\\'")}')">WA</button>
+          <button class="mini-btn" onclick="shareWA(${i})" style="${waBtnStyle}">${waLabel}</button>
           <button class="mini-btn" style="background:#a04040" onclick="deleteGuest(${i})">×</button>
         </div>
       </div>
@@ -5633,9 +5659,140 @@ function copyLink(url) {
     .catch(() => showToast('Tidak dapat menyalin link. Silakan salin manual.'));
 }
 
-function shareWA(link, name) {
-  const msg = `Bismillah, dengan penuh harap kami mengundang ${name} untuk hadir di pernikahan kami.\n\nBerikut link undangan digital:\n${link}\n\nMerupakan kehormatan bagi kami apabila berkenan hadir.\n\n— Cintya & Fathoni`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+/* =========================================================
+   WHATSAPP HELPERS
+   ========================================================= */
+
+// Bersihkan tag HTML dari value sheet (mis. venue_html) untuk WA text plain
+function stripHtml(s) {
+  return String(s || '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Normalisasi no HP Indonesia: 0812... / +62812... / 812... -> 62812...
+function normalizePhone(p) {
+  let n = String(p || '').replace(/[^\d]/g, '');
+  if (!n) return '';
+  if (n.startsWith('620')) n = '62' + n.slice(3);    // 6208xx (typo) -> 628xx
+  else if (n.startsWith('0')) n = '62' + n.slice(1);  // 08xx -> 628xx
+  else if (n.startsWith('8')) n = '62' + n;           // 8xx  -> 628xx
+  // 62xx tidak diubah
+  return n;
+}
+
+// Template pesan WA — panjang, sopan, ambil konten dinamis dari sheet kalau ada
+function buildWAMessage(name, link) {
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const coupleShort = m['cover.names']            || 'Cintya & Fathoni';
+  const brideFull   = m['couple.bride.name_full'] || 'Cintya Febri Prasetyowati';
+  const groomFull   = m['couple.groom.name_full'] || 'Moh. Ilham Fathoni';
+  const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  const venue       = stripHtml(m['events.akad.venue_html']) || 'Hotel Styvie Surabaya';
+  return (
+`Assalamu'alaikum Warahmatullahi Wabarakatuh
+
+Bapak/Ibu/Saudara/i *${name}* yang kami hormati,
+
+Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud mengundang Bapak/Ibu/Saudara/i untuk turut hadir serta memberikan doa restu dalam acara pernikahan kami:
+
+💍 *${brideFull}*
+       — & —
+💍 *${groomFull}*
+
+🗓  ${eventDate}
+📍  ${venue}
+
+Detail lengkap susunan acara, denah lokasi, serta konfirmasi kehadiran (RSVP) dapat dilihat melalui undangan digital berikut:
+
+🔗 ${link}
+
+Merupakan suatu kebahagiaan dan kehormatan tersendiri bagi kami apabila Bapak/Ibu/Saudara/i berkenan meluangkan waktu untuk hadir dan turut berbahagia bersama keluarga besar kami.
+
+Mohon maaf apabila undangan ini disampaikan melalui pesan WhatsApp. Atas perhatian, kehadiran, dan doa restunya, kami sekeluarga mengucapkan terima kasih yang sebesar-besarnya.
+
+Wassalamu'alaikum Warahmatullahi Wabarakatuh
+
+Hormat kami,
+*${coupleShort}* beserta Keluarga`
+  );
+}
+
+// Kirim WA untuk satu tamu (index di guest list)
+function shareWA(idx) {
+  const guests = getGuestList();
+  const g = guests[idx];
+  if (!g) return;
+  const baseUrl = window.location.origin + window.location.pathname;
+  const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
+  const msg = buildWAMessage(g.name, link);
+  const phone = g.phone ? normalizePhone(g.phone) : '';
+  const waUrl = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+}
+
+// WA Blast — buka tab WhatsApp untuk semua tamu yang punya nomor HP,
+// dengan delay 2 detik per tab supaya browser tidak mass-block popup.
+async function wablastAll() {
+  const guests = getGuestList();
+  const withPhone = guests.filter(g => g.phone && g.phone.replace(/[^\d]/g, '').length >= 8);
+  if (withPhone.length === 0) {
+    showToast('Tidak ada tamu dengan No HP valid. Isi dulu di kolom No HP.', 'error');
+    return;
+  }
+  const ok = confirm(
+    `WA BLAST: akan membuka ${withPhone.length} tab WhatsApp Web (delay 2 detik per tab).\n\n` +
+    `PENTING: pastikan popup DIIZINKAN untuk site ini di browser. Kalau ada notifikasi popup blocked, klik "Always allow" lalu jalankan ulang.\n\n` +
+    `Lanjutkan?`
+  );
+  if (!ok) return;
+
+  const baseUrl = window.location.origin + window.location.pathname;
+  for (let i = 0; i < withPhone.length; i++) {
+    const g = withPhone[i];
+    const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
+    const phone = normalizePhone(g.phone);
+    const msg = buildWAMessage(g.name, link);
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    const w = window.open(waUrl, '_blank');
+    if (!w || w.closed) {
+      showToast(`Popup diblokir di tamu ke-${i + 1} (${g.name}). Izinkan popup lalu klik blast lagi.`, 'error');
+      return;
+    }
+    showToast(`[${i + 1}/${withPhone.length}] Buka WA: ${g.name}`, 'success');
+    if (i < withPhone.length - 1) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  showToast(`Selesai. ${withPhone.length} tab WA terbuka — klik Send di tiap tab.`, 'success');
+}
+
+// Copy semua link WA ke clipboard sebagai TSV (Nama | No HP | Sesi | WA URL).
+// Berguna untuk paste ke Google Sheets / Excel sebagai log pengiriman.
+function copyAllWALinks() {
+  const guests = getGuestList();
+  if (guests.length === 0) {
+    showToast('Belum ada tamu.', 'error');
+    return;
+  }
+  const baseUrl = window.location.origin + window.location.pathname;
+  const lines = guests.map(g => {
+    const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
+    const phone = g.phone ? normalizePhone(g.phone) : '';
+    const msg = buildWAMessage(g.name, link);
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    return `${g.name}\t${g.phone || ''}\t${g.session}\t${waUrl}`;
+  });
+  const text = ['Nama\tNo HP\tSesi\tWA Link', ...lines].join('\n');
+  copyToClipboard(text)
+    .then(() => showToast(`${guests.length} link WA tersalin. Paste ke Sheet/Excel.`, 'success'))
+    .catch(() => showToast('Gagal menyalin link. Coba browser lain.', 'error'));
 }
 
 function exportCSV() {
