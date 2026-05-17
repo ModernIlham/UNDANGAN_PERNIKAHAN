@@ -1699,8 +1699,8 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
   pointer-events: none;
   z-index: 0;
 }
-/* Konten di atas pattern */
-.qris-modal-card > *:not(.qris-bg-pattern):not(.qris-corner) {
+/* Konten di atas pattern (kecuali bg/corner/close yang punya positioning sendiri) */
+.qris-modal-card > *:not(.qris-bg-pattern):not(.qris-corner):not(.qris-modal-close) {
   position: relative;
   z-index: 2;
 }
@@ -1721,21 +1721,31 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
 .qris-corner-br { bottom: 4px; right: 4px; transform: scale(-1, -1); }
 .qris-modal-close {
   position: absolute;
-  top: 8px;
-  right: 36px;
-  background: transparent;
-  border: 1px solid var(--sogan);
+  top: 12px;
+  right: 12px;
+  background: #fff;
+  border: 1.5px solid var(--sogan-dark);
   color: var(--sogan-darkest);
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  font-size: 18px;
-  line-height: 1;
+  font-size: 20px;
+  line-height: 30px;
+  text-align: center;
   cursor: pointer;
   font-family: inherit;
-  z-index: 1;
+  font-weight: 700;
+  padding: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,235,180,0.6);
+  transition: transform 0.15s ease, background 0.15s ease;
 }
-.qris-modal-close:hover { background: var(--sogan); color: var(--gading); }
+.qris-modal-close:hover {
+  background: var(--sogan-darkest);
+  color: var(--gading);
+  transform: scale(1.08) rotate(90deg);
+}
+.qris-modal-close:active { transform: scale(0.95); }
 .qris-modal-title {
   font-family: 'Cinzel', serif;
   font-size: 14px;
