@@ -42,6 +42,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Cinzel:wght@400;500;600&family=Marcellus&family=Pinyon+Script&family=Great+Vibes&family=Allura&family=Italianno&family=Parisienne&family=Sacramento&family=Tangerine:wght@400;700&family=Alex+Brush&family=Dancing+Script:wght@500;700&family=Petit+Formal+Script&family=Mrs+Saint+Delafield&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
+<!-- ===== QR LIBRARIES (client-side, lazy load) =====
+     qrcode-generator: bikin QR untuk e-tiket tamu (~14 KB)
+     html5-qrcode    : scanner camera utk penerima tamu (~80 KB, hanya di mode scan)
+============================================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+
 <style>
 /* =========================================================
    PALET JAWA KLASIK - SEPIA HANGAT (REFINED)
@@ -1436,6 +1442,24 @@ section {
   color: #8a5a17;
   border-color: #d2a857;
 }
+.wish-arrived {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  padding: 2px 7px;
+  margin-left: 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  vertical-align: middle;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(18, 140, 126, 0.4);
+}
+.wish-item.is-arrived {
+  background: linear-gradient(90deg, rgba(37, 211, 102, 0.04), transparent 40%);
+}
 
 /* =========================================================
    CLOSING
@@ -1600,6 +1624,234 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
   color: #eaf6ea;
   box-shadow: 0 4px 20px rgba(45,90,50,0.45), 0 0 0 1px rgba(142,209,142,0.25) inset;
 }
+/* ===== QR TICKET BUTTON & MODAL ===== */
+.qr-ticket-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 28px;
+  background: linear-gradient(180deg, var(--putih-tulang), var(--gading));
+  border: 2px solid var(--kuning-keemasan);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  color: var(--sogan-darkest);
+  box-shadow: 0 4px 12px rgba(58,32,15,0.15), inset 0 0 0 1px rgba(255,235,180,0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.qr-ticket-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(58,32,15,0.25), inset 0 0 0 1px rgba(255,235,180,0.7);
+}
+.qr-ticket-icon { color: var(--sogan-darkest); display: block; line-height: 0; }
+.qr-ticket-label {
+  font-size: 12px;
+  letter-spacing: 3px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.qr-ticket-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--sogan);
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 10, 3, 0.85);
+  z-index: 850;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px 16px;
+  overflow-y: auto;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.qr-modal-overlay.show { display: flex; }
+.qr-modal-card {
+  background: linear-gradient(180deg, var(--putih-tulang), var(--gading));
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  width: 100%;
+  max-width: 380px;
+  padding: 24px 20px 18px;
+  text-align: center;
+  position: relative;
+  animation: waMenuPop 0.25s ease-out;
+}
+.qr-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: 1px solid var(--sogan);
+  color: var(--sogan-darkest);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.qr-modal-close:hover { background: var(--sogan); color: var(--gading); }
+.qr-modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--sogan-darkest);
+  margin: 0 0 4px;
+}
+.qr-modal-subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--sogan-darkest);
+  margin: 0 0 14px;
+}
+.qr-modal-frame {
+  display: inline-block;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 8px;
+  margin: 0 auto;
+}
+.qr-modal-frame svg, .qr-modal-frame img { display: block; width: 280px; height: 280px; }
+.qr-modal-token {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--sogan);
+  margin: 12px 0 0;
+  word-break: break-all;
+}
+.qr-modal-session {
+  font-size: 12px;
+  color: var(--sogan-darkest);
+  margin: 4px 0 0;
+  font-style: italic;
+}
+.qr-modal-hint {
+  font-size: 11px;
+  color: var(--sogan);
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+.qr-modal-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+.qr-modal-actions button {
+  flex: 1;
+  padding: 10px 14px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  border: 1px solid var(--kuning-keemasan);
+  background: var(--gading);
+  color: var(--sogan-darkest);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.qr-modal-actions button:first-child {
+  background: var(--sogan-darkest);
+  color: var(--gading);
+  border-color: var(--sogan);
+}
+
+/* ===== SCANNER PAGE (active when ?mode=scan) ===== */
+#scanner-page { display: none; }
+body.scanner-mode > *:not(#toast):not(#scanner-page) { display: none !important; }
+body.scanner-mode > #scanner-page {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #1a0f06, #0a0502);
+  color: var(--gading);
+  z-index: 9000;
+  overflow-y: auto;
+  padding: 20px;
+}
+.scanner-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+.scanner-wrap h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: var(--emas-terang);
+  margin: 10px 0;
+}
+.scanner-hint {
+  font-size: 13px;
+  color: var(--gading);
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+#qr-reader {
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--kuning-keemasan);
+}
+.scan-result {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 50px;
+  display: none;
+}
+.scan-result.show { display: block; }
+.scan-result.success {
+  background: #2d5a32;
+  border: 1px solid #6db86d;
+  color: #eaf6ea;
+}
+.scan-result.warning {
+  background: #5a4d2d;
+  border: 1px solid #d2a857;
+  color: #fff3d0;
+}
+.scan-result.error {
+  background: #5a2727;
+  border: 1px solid #c47864;
+  color: #fbe7e7;
+}
+.scan-reset-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--kuning-keemasan);
+  color: var(--sogan-darkest);
+  border: none;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.scanner-footer {
+  font-size: 11px;
+  color: var(--gading);
+  opacity: 0.6;
+  margin-top: 16px;
+}
+.scanner-footer a { color: var(--emas-terang); text-decoration: underline; }
+
 /* ===== WA MENU MODAL ===== */
 .wa-menu-overlay {
   position: fixed;
@@ -4099,6 +4351,26 @@ img[src$="loading.svg"] {
     </p>
   </div>
 
+  <!-- LINK SCANNER PENERIMA TAMU (untuk staff souvenir) -->
+  <div class="admin-section" style="border:1px solid #25D366;background:rgba(37,211,102,0.05)">
+    <h3>📷 LINK SCANNER PENERIMA TAMU</h3>
+    <p style="font-size:12px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
+      Bagikan link ini <strong>HANYA ke staff penerima tamu / petugas souvenir</strong>.
+      Mereka buka link di HP → izinkan kamera → scan QR e-tiket tamu yang datang →
+      sistem otomatis validasi (✓ valid / ⚠ sudah dipakai) → data masuk ke tab "Attendance" di sheet.
+    </p>
+    <p style="font-size:11px;color:var(--sogan);margin-bottom:8px">
+      ⚠️ Jangan kasih link ini ke tamu — mereka bisa "menggesek" QR sendiri sebelum acara.
+      Untuk ganti kunci akses, edit <code>CONFIG.scannerKey</code> di HTML &amp; <code>SCANNER_KEY</code> di Apps Script.
+    </p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
+      <code id="scanner-url-display" style="flex:1;min-width:240px;padding:8px 10px;background:#fff;border:1px solid var(--kuning-keemasan);border-radius:4px;font-size:11px;word-break:break-all;color:var(--sogan-darkest)"></code>
+      <button class="mini-btn" onclick="copyScannerUrl()" style="background:#25D366;color:#fff">Copy Link</button>
+      <button class="mini-btn" onclick="window.open(getScannerUrl(),'_blank')">Buka</button>
+      <button class="mini-btn" onclick="shareScannerUrlWA()" style="background:#25D366;color:#fff">Kirim WA</button>
+    </div>
+  </div>
+
   <!-- LINK PER TAMU -->
   <div class="admin-section">
     <h3>🔗 LINK UNDANGAN PER TAMU</h3>
@@ -4537,6 +4809,24 @@ img[src$="loading.svg"] {
       <button type="submit" class="submit-btn" data-c="rsvp.submit_button">KIRIM KONFIRMASI</button>
     </form>
 
+    <!-- E-TIKET QR untuk pengambilan souvenir -->
+    <div class="reveal qr-section" id="qr-ticket-section" style="display:none">
+      <h3 style="font-family:'Cinzel';font-size:12px;letter-spacing:3px;margin-top:2.5rem;color:var(--sogan-darkest);position:relative;z-index:2">— E-TIKET QR ANDA —</h3>
+      <p style="font-size:13px;color:var(--sogan-dark);max-width:380px;margin:6px auto 14px;line-height:1.5">
+        Tunjukkan QR ini ke penerima tamu saat tiba untuk mendapatkan souvenir.
+      </p>
+      <button class="qr-ticket-btn" onclick="showQrModal()">
+        <span class="qr-ticket-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
+            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm15-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/>
+            <path d="M15 13h2v2h-2zM19 17h2v2h-2zM13 17h2v2h-2zM13 13h-2v2h2z" opacity=".7"/>
+          </svg>
+        </span>
+        <span class="qr-ticket-label">LIHAT QR ANDA</span>
+        <span class="qr-ticket-sub" id="qr-ticket-guest"></span>
+      </button>
+    </div>
+
     <div class="reveal">
       <h3 style="font-family:'Cinzel';font-size:12px;letter-spacing:3px;margin-top:2.5rem;color:var(--sogan-darkest);position:relative;z-index:2" data-c="rsvp.wishes_title">— UCAPAN & DOA —</h3>
       <div class="wishes-list" id="wishes-list"></div>
@@ -4588,6 +4878,56 @@ img[src$="loading.svg"] {
 <div id="toast"></div>
 
 <!-- ====================================================
+     QR TICKET MODAL — tampil QR per tamu untuk pengambilan souvenir
+     ==================================================== -->
+<div id="qr-modal-overlay" class="qr-modal-overlay" onclick="hideQrModal(event)">
+  <div class="qr-modal-card" onclick="event.stopPropagation()">
+    <button class="qr-modal-close" onclick="hideQrModal()" aria-label="Tutup">&times;</button>
+    <h3 class="qr-modal-title">E-TIKET KEHADIRAN</h3>
+    <p class="qr-modal-subtitle" id="qr-modal-name">—</p>
+    <div class="qr-modal-frame" id="qr-modal-frame"></div>
+    <p class="qr-modal-token" id="qr-modal-token"></p>
+    <p class="qr-modal-session" id="qr-modal-session"></p>
+    <p class="qr-modal-hint">Tunjukkan QR ini kepada penerima tamu untuk mengambil souvenir. Bisa di-screenshot atau di-save.</p>
+    <div class="qr-modal-actions">
+      <button onclick="downloadQrImage()">Simpan Gambar</button>
+      <button onclick="hideQrModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     QR SEND TO WA MODAL — kirim e-tiket ke nomor tamu
+     ==================================================== -->
+<div id="qr-send-overlay" class="qr-modal-overlay" onclick="hideQrSendModal(event)">
+  <div class="qr-modal-card qr-send-card" onclick="event.stopPropagation()">
+    <button class="qr-modal-close" onclick="hideQrSendModal()" aria-label="Tutup">&times;</button>
+    <h3 class="qr-modal-title">KIRIM E-TIKET KE WHATSAPP</h3>
+    <p class="qr-modal-hint" style="margin-top:8px">Masukkan nomor WhatsApp Anda — kami kirim link e-tiket QR untuk ditunjukkan saat tiba (pengambilan souvenir).</p>
+    <input type="tel" id="qr-send-phone" placeholder="No HP (08xx atau 628xx)" inputmode="tel" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--kuning-keemasan);border-radius:6px;margin-top:8px;font-family:inherit;background:var(--putih-tulang);color:var(--sogan-darkest);box-sizing:border-box">
+    <div class="qr-modal-actions" style="margin-top:14px">
+      <button onclick="sendQrToWa()" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none">Kirim ke WhatsApp</button>
+      <button onclick="hideQrSendModal()">Nanti saja</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     SCANNER PAGE — penerima tamu scan QR untuk validasi
+     Aktif saat URL ?mode=scan
+     ==================================================== -->
+<div id="scanner-page">
+  <div class="scanner-wrap">
+    <h2>SCANNER E-TIKET TAMU</h2>
+    <p class="scanner-hint">Arahkan kamera ke QR e-tiket tamu untuk validasi pengambilan souvenir.</p>
+    <div id="qr-reader"></div>
+    <div id="scan-result" class="scan-result"></div>
+    <button onclick="resetScanner()" class="scan-reset-btn">Scan Lagi</button>
+    <p class="scanner-footer">Mode Scanner · <a href="?">kembali ke undangan</a></p>
+  </div>
+</div>
+
+<!-- ====================================================
      WA MENU MODAL — grid tombol nama tamu untuk quick send
      ==================================================== -->
 <div id="wa-menu-overlay" class="wa-menu-overlay" onclick="hideWaMenu(event)">
@@ -4637,8 +4977,17 @@ img[src$="loading.svg"] {
      setupContentSheet_(ss, false);
      setupGallerySheet_(ss);
      setupRsvpSheet_(ss);
+     setupAttendanceSheet_(ss);
      try { SpreadsheetApp.getUi().alert('Setup selesai. Sekarang Deploy → Web app, salin URL ke HTML.'); }
      catch (e) { Logger.log('Setup selesai.'); }
+   }
+   function setupAttendanceSheet_(ss) {
+     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(['token','name','redeemed_at','first_seen_name']);
+       sh.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.setFrozenRows(1);
+     }
    }
    function resetContentDefaults() {
      setupContentSheet_(SpreadsheetApp.getActiveSpreadsheet(), true);
@@ -4682,14 +5031,64 @@ img[src$="loading.svg"] {
        sh.setFrozenRows(1);
      }
    }
-   function doGet() {
+   // GANTI ke string acak yang sulit ditebak. HARUS sama dengan
+   // CONFIG.scannerKey di HTML index. Bila ganti, deploy ulang Web App.
+   const SCANNER_KEY = 'souvenir2026';
+
+   function doGet(e) {
+     const params = (e && e.parameter) || {};
+     // Action: redeem token (scanner penerima tamu)
+     if (params.action === 'redeem') {
+       return redeemToken(params.token, params.name, params.key);
+     }
+     // Default: return semua konten + attendance (untuk badge "Sudah Hadir")
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      const out = {
        content: sheetToObject(ss.getSheetByName('Content')),
-       gallery: sheetToArray(ss.getSheetByName('Gallery'))
+       gallery: sheetToArray(ss.getSheetByName('Gallery')),
+       attendance: sheetToArray(ss.getSheetByName('Attendance'))
      };
      return ContentService.createTextOutput(JSON.stringify(out))
        .setMimeType(ContentService.MimeType.JSON);
+   }
+   function redeemToken(token, name, key) {
+     // Wajib validasi kunci scanner — cegah random user redeem QR
+     if (!key || key !== SCANNER_KEY) {
+       return ContentService.createTextOutput(JSON.stringify({
+         success: false,
+         error: 'Unauthorized: scanner key tidak valid'
+       })).setMimeType(ContentService.MimeType.JSON);
+     }
+     if (!token) {
+       return ContentService.createTextOutput(JSON.stringify({success:false,error:'no token'}))
+         .setMimeType(ContentService.MimeType.JSON);
+     }
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(['token','name','redeemed_at','first_seen_name']);
+     }
+     // Cek apakah token sudah ada
+     const data = sh.getDataRange().getValues();
+     for (let i = 1; i < data.length; i++) {
+       if (data[i][0] === token) {
+         return ContentService.createTextOutput(JSON.stringify({
+           success: true,
+           alreadyRedeemed: true,
+           name: data[i][1] || data[i][3] || name || '',
+           timestamp: data[i][2] ? new Date(data[i][2]).toISOString() : ''
+         })).setMimeType(ContentService.MimeType.JSON);
+       }
+     }
+     // First redeem — append
+     const now = new Date();
+     sh.appendRow([token, name || '', now, name || '']);
+     return ContentService.createTextOutput(JSON.stringify({
+       success: true,
+       alreadyRedeemed: false,
+       name: name || '',
+       timestamp: now.toISOString()
+     })).setMimeType(ContentService.MimeType.JSON);
    }
    function doPost(e) {
      const data = JSON.parse(e.postData.contents);
@@ -4893,6 +5292,11 @@ const CONFIG = {
   // URL Apps Script Web App untuk GET data konten dari sheet
   SHEET_DATA_URL: 'https://script.google.com/macros/s/AKfycbxqFUwzfq5ve-mrAHxHObr-jvG04p-WIhOsRxUWfS1p4PBsBRCi-cxSUNUyLIVqOzP1/exec',
   adminPassword: 'admin123',
+  // Kunci akses scanner — HARUS sama dengan SCANNER_KEY di Apps Script.
+  // Ganti ke string acak yang sulit ditebak. Link untuk penerima tamu:
+  //   https://undanganku.store/?scanner=KEY
+  // Hanya yang punya link ini bisa pakai scanner & validasi tamu.
+  scannerKey: 'souvenir2026',
   // Maksimum jumlah tamu di dropdown — bisa di-override oleh sheet key "rsvp.max_guests"
   maxGuests: 2,
   // Jumlah sesi resepsi default — bisa di-override oleh sheet key "events.resepsi.session_count"
@@ -4910,6 +5314,9 @@ const CONFIG = {
    CONTENT LOADER — fetch data dari Google Sheet lalu inject ke DOM
    ============================================================================ */
 let SHEET_CONTENT_MAP = {};
+// Map nama tamu (lowercase) -> info attendance dari tab "Attendance" (token sudah di-redeem).
+// Dipakai untuk render badge "✓ HADIR" di section UCAPAN & DOA (buku tamu).
+let SHEET_ATTENDANCE_MAP = {};
 
 async function loadSheetContent() {
   if (!CONFIG.SHEET_DATA_URL) return;
@@ -4921,8 +5328,17 @@ async function loadSheetContent() {
     applyContent(SHEET_CONTENT_MAP);
     applyGallery(data.gallery || []);
     applyConfigOverrides(SHEET_CONTENT_MAP);
-    // Re-run guest/session injection so cover-session-info + form sesi
-    // ikut update bila sessionCount / sessionLabels berubah dari sheet.
+    // Build attendance map: name (lowercase) -> { timestamp, name }
+    SHEET_ATTENDANCE_MAP = {};
+    (data.attendance || []).forEach(row => {
+      const nm = String(row.name || row.first_seen_name || '').trim().toLowerCase();
+      if (nm) SHEET_ATTENDANCE_MAP[nm] = {
+        timestamp: row.redeemed_at,
+        name: row.name || row.first_seen_name || ''
+      };
+    });
+    // Re-render wishes supaya badge "Sudah Hadir" muncul
+    if (typeof renderWishes === 'function') renderWishes();
     if (typeof getGuestFromURL === 'function') getGuestFromURL();
   } catch (err) {
     console.warn('[Sheet] gagal load, pakai default:', err);
@@ -5649,6 +6065,11 @@ function submitRSVP(e) {
     }, 2400);
   }
   showToast('✓ Konfirmasi berhasil dikirim. Terima kasih 🙏', 'success');
+
+  // Setelah submit, tawarkan kirim e-tiket QR ke WA tamu (kalau hadir/ragu)
+  if (attendance === 'Hadir' || attendance === 'Masih Ragu') {
+    setTimeout(() => showQrSendModal(name), 1500);
+  }
 }
 
 const SAMPLE_WISHES = [
@@ -5672,10 +6093,16 @@ function renderWishItem(w, sampleClass) {
   const badge = w.attendance
     ? `<span class="wish-attendance ${attendanceClass(w.attendance)}">${escapeHtml(w.attendance)}</span>`
     : '';
+  // Cek apakah tamu ini sudah hadir (QR sudah di-scan penerima tamu)
+  const arrivalKey = String(w.name || '').trim().toLowerCase();
+  const arrival = (typeof SHEET_ATTENDANCE_MAP === 'object' && SHEET_ATTENDANCE_MAP[arrivalKey]) || null;
+  const arrivedBadge = arrival
+    ? `<span class="wish-arrived" title="Sudah scan QR pada ${escapeAttr(String(arrival.timestamp || ''))}">✓ HADIR</span>`
+    : '';
   return `
-    <div class="wish-item ${cls}">
+    <div class="wish-item ${cls} ${arrival ? 'is-arrived' : ''}">
       <div class="wish-row">
-        <span class="wish-name">${escapeHtml(w.name)}</span>
+        <span class="wish-name">${escapeHtml(w.name)}${arrivedBadge}</span>
         ${badge}
       </div>
       <p class="wish-text">"${escapeHtml(w.message)}"</p>
@@ -5714,6 +6141,7 @@ function openAdmin() {
   updateAdminStats();
   renderAdminRSVPs();
   renderGuestLinks();
+  renderScannerUrl();
 }
 
 function closeAdmin() {
@@ -6039,6 +6467,321 @@ function renderBlastStatus() {
 }
 
 /* =========================================================
+   QR E-TICKET — token generator, modal display, scanner mode,
+   redeem (validasi), kirim ke WA
+   ========================================================= */
+
+// Deterministik token per nama tamu — pakai hash djb2 + base36.
+// Salt rahasia bisa di-override via CONFIG.barcodeSalt atau sheet.
+function tokenForGuest(name) {
+  if (!name) return '';
+  const salt = (CONFIG && CONFIG.barcodeSalt) || 'cf-wedding-2026';
+  let h = 5381;
+  const s = String(name) + salt;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  let token = Math.abs(h).toString(36).toUpperCase();
+  while (token.length < 8) token = '0' + token;
+  return 'CF' + token;
+}
+
+// State QR modal: name + token saat ini
+let _qrCurrentName = '';
+let _qrCurrentToken = '';
+let _qrCurrentSession = '';
+
+// Tampilkan section QR di RSVP kalau URL punya ?to= (tamu spesifik)
+function initQrSection() {
+  const params = new URLSearchParams(location.search);
+  const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
+  const section = document.getElementById('qr-ticket-section');
+  if (!section) return;
+  if (guestName) {
+    section.style.display = '';
+    const sub = document.getElementById('qr-ticket-guest');
+    if (sub) sub.textContent = guestName;
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+function showQrModal() {
+  const params = new URLSearchParams(location.search);
+  const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
+  if (!guestName) {
+    showToast('QR hanya tersedia kalau undangan dibuka via link tamu (URL ada ?to=Nama).', 'error');
+    return;
+  }
+  const session = params.get('sesi') || 'Sesi 2';
+  showQrModalFor(guestName, tokenForGuest(guestName), session);
+}
+
+function showQrModalFor(name, token, session) {
+  _qrCurrentName = name;
+  _qrCurrentToken = token;
+  _qrCurrentSession = session || '';
+
+  document.getElementById('qr-modal-name').textContent = name;
+  document.getElementById('qr-modal-token').textContent = token;
+  const sessLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session]) || session || '';
+  document.getElementById('qr-modal-session').textContent = sessLabel ? 'Sesi: ' + sessLabel : '';
+
+  // Generate QR — pakai library qrcode-generator
+  if (typeof qrcode === 'undefined') {
+    showToast('QR library belum ter-load, refresh halaman.', 'error');
+    return;
+  }
+  const qr = qrcode(0, 'M');
+  const qrUrl = `${location.origin}${location.pathname}?mode=scan&t=${token}&n=${encodeURIComponent(name)}`;
+  qr.addData(qrUrl);
+  qr.make();
+  document.getElementById('qr-modal-frame').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+
+  document.getElementById('qr-modal-overlay').classList.add('show');
+}
+
+function hideQrModal(event) {
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('qr-modal-overlay').classList.remove('show');
+}
+
+function downloadQrImage() {
+  if (typeof qrcode === 'undefined' || !_qrCurrentToken) {
+    showToast('QR belum ter-render', 'error');
+    return;
+  }
+  const qr = qrcode(0, 'M');
+  const qrUrl = `${location.origin}${location.pathname}?mode=scan&t=${_qrCurrentToken}&n=${encodeURIComponent(_qrCurrentName)}`;
+  qr.addData(qrUrl);
+  qr.make();
+  const dataUrl = qr.createDataURL(10, 4);  // cell 10px, margin 4
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `e-tiket-${_qrCurrentToken}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('✓ Gambar QR ter-download', 'success');
+}
+
+/* ===== KIRIM E-TIKET QR KE NOMOR WA ===== */
+function showQrSendModal(forName) {
+  _qrCurrentName = forName || _qrCurrentName;
+  if (!_qrCurrentName) return;
+  document.getElementById('qr-send-phone').value = '';
+  document.getElementById('qr-send-overlay').classList.add('show');
+  setTimeout(() => document.getElementById('qr-send-phone').focus(), 100);
+}
+
+function hideQrSendModal(event) {
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('qr-send-overlay').classList.remove('show');
+}
+
+function sendQrToWa() {
+  const rawPhone = document.getElementById('qr-send-phone').value.trim();
+  const phone = normalizePhone(rawPhone);
+  if (!phone || phone.length < 10) {
+    showToast('Nomor HP tidak valid. Coba lagi.', 'error');
+    return;
+  }
+  const name = _qrCurrentName;
+  const token = tokenForGuest(name);
+  const params = new URLSearchParams(location.search);
+  const session = params.get('sesi') || '';
+  const sessLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session]) || session;
+  const qrPageUrl = `${location.origin}${location.pathname}?qr=${token}&n=${encodeURIComponent(name)}&sesi=${encodeURIComponent(session)}`;
+  const msg =
+`Halo *${safeNameForChat(name)}*,
+
+Terima kasih sudah konfirmasi kehadiran untuk pernikahan *Cintya & Fathoni*.
+
+Berikut e-tiket QR Anda — *tunjukkan ke penerima tamu saat tiba* untuk mendapatkan souvenir:
+
+🎫 Buka e-tiket:
+${qrPageUrl}
+
+Detail:
+*Nama :* ${safeNameForChat(name)}
+${sessLabel ? '*Sesi :* ' + sessLabel + '\n' : ''}*Token :* ${token}
+
+Sampai jumpa di hari bahagia kami!
+
+Salam hangat,
+*Cintya & Fathoni*`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  hideQrSendModal();
+  showToast('✓ Membuka WhatsApp untuk kirim e-tiket', 'success');
+}
+
+/* ===== SCANNER MODE — penerima tamu (perlu kunci akses) ===== */
+let _scannerInstance = null;
+let _scannerActiveKey = '';  // kunci yang lolos validasi, dipakai untuk redeem
+
+async function initScannerMode(providedKey) {
+  document.body.classList.add('scanner-mode');
+
+  // Validasi kunci akses sebelum aktif. Hanya yang punya link dgn key
+  // yang benar bisa pakai scanner.
+  const expectedKey = (CONFIG && CONFIG.scannerKey) || '';
+  if (!providedKey || providedKey !== expectedKey) {
+    showScannerAccessDenied(providedKey);
+    return;
+  }
+  _scannerActiveKey = providedKey;
+
+  // Load html5-qrcode dynamically (hanya saat butuh)
+  if (typeof Html5Qrcode === 'undefined') {
+    await loadScript('https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js');
+  }
+  if (typeof Html5Qrcode === 'undefined') {
+    document.getElementById('qr-reader').innerHTML = '<p style="color:#fff;padding:20px">Gagal load scanner library. Cek koneksi internet.</p>';
+    return;
+  }
+  // Cek apakah URL sudah include token (auto-validate)
+  const params = new URLSearchParams(location.search);
+  const tokenFromUrl = params.get('t');
+  const nameFromUrl = params.get('n') ? decodeURIComponent(params.get('n')) : '';
+  if (tokenFromUrl) {
+    handleScannedData(tokenFromUrl, nameFromUrl);
+  }
+  startCameraScanner();
+}
+
+function showScannerAccessDenied(wrongKey) {
+  const page = document.getElementById('scanner-page');
+  if (!page) return;
+  page.innerHTML = `
+    <div class="scanner-wrap" style="padding:40px 16px">
+      <h2 style="color:#ff8a8a">⚠ AKSES DITOLAK</h2>
+      <p style="color:#ffd9d9;margin-bottom:24px">
+        Halaman scanner hanya dapat diakses oleh <strong>penerima tamu</strong>
+        yang memiliki link khusus dengan kunci akses yang benar.
+      </p>
+      ${wrongKey ? `<p style="color:#ffb;font-size:12px;margin-bottom:16px">Kunci yang Anda pakai: <code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:3px">${escapeHtml(wrongKey)}</code> tidak cocok.</p>` : ''}
+      <p style="color:#fff;font-size:13px;margin-bottom:24px;line-height:1.6">
+        Kalau Anda penerima tamu resmi, mohon minta link scanner yang valid kepada admin / pengantin.
+      </p>
+      <a href="?" style="display:inline-block;padding:12px 24px;background:var(--kuning-keemasan);color:var(--sogan-darkest);border-radius:6px;text-decoration:none;font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;font-weight:600">KEMBALI KE UNDANGAN</a>
+    </div>
+  `;
+}
+
+function startCameraScanner() {
+  if (typeof Html5Qrcode === 'undefined') return;
+  if (_scannerInstance) {
+    try { _scannerInstance.stop(); } catch (e) {}
+  }
+  _scannerInstance = new Html5Qrcode('qr-reader');
+  _scannerInstance.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    (decodedText) => {
+      _scannerInstance.pause(true);
+      // Parse URL or raw token
+      let token = '', name = '';
+      try {
+        const u = new URL(decodedText);
+        token = u.searchParams.get('t') || '';
+        name = decodeURIComponent(u.searchParams.get('n') || '');
+      } catch {
+        token = decodedText;
+      }
+      handleScannedData(token, name);
+    },
+    () => {}
+  ).catch(err => {
+    document.getElementById('qr-reader').innerHTML = '<p style="color:#fff;padding:20px">Gagal akses kamera. Pastikan browser punya izin kamera.</p>';
+    console.error(err);
+  });
+}
+
+function resetScanner() {
+  showScanResult('', '');
+  if (_scannerInstance) {
+    try { _scannerInstance.resume(); } catch (e) {}
+  }
+}
+
+function showScanResult(level, msg) {
+  const el = document.getElementById('scan-result');
+  el.className = 'scan-result';
+  if (!level) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  el.classList.add('show', level);
+  el.innerHTML = msg;
+}
+
+async function handleScannedData(token, name) {
+  if (!token) {
+    showScanResult('error', '<strong>QR tidak valid</strong>');
+    return;
+  }
+  if (!CONFIG.GOOGLE_SCRIPT_URL && !CONFIG.SHEET_DATA_URL) {
+    showScanResult('error', '<strong>Spreadsheet belum dikonfigurasi.</strong> Set CONFIG.SHEET_DATA_URL di HTML.');
+    return;
+  }
+  showScanResult('warning', '<em>Validasi ke server...</em>');
+  try {
+    const url = (CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL) +
+      '?action=redeem&token=' + encodeURIComponent(token) +
+      '&name=' + encodeURIComponent(name || '') +
+      '&key=' + encodeURIComponent(_scannerActiveKey || '');
+    const res = await fetch(url, { cache: 'no-store' });
+    const data = await res.json();
+    if (data.success) {
+      if (data.alreadyRedeemed) {
+        const t = data.timestamp ? new Date(data.timestamp).toLocaleString('id-ID') : '-';
+        showScanResult('warning',
+          `<strong>⚠ SUDAH DIPAKAI</strong><br>Tamu: <strong>${data.name || name || '-'}</strong><br>Diambil pada: ${t}`);
+      } else {
+        showScanResult('success',
+          `<strong>✓ VALID — BERI SOUVENIR</strong><br>Tamu: <strong>${data.name || name || '-'}</strong><br>Token: ${token}`);
+      }
+    } else {
+      showScanResult('error', `<strong>✗ Validasi gagal</strong><br>${data.error || 'unknown error'}`);
+    }
+  } catch (e) {
+    showScanResult('error', '<strong>Gagal hubungi server.</strong> Cek koneksi internet.');
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+/* ===== SCANNER URL helpers (di admin panel) ===== */
+function getScannerUrl() {
+  const base = location.origin + location.pathname;
+  const key = (CONFIG && CONFIG.scannerKey) || '';
+  return base + '?scanner=' + encodeURIComponent(key);
+}
+
+function renderScannerUrl() {
+  const el = document.getElementById('scanner-url-display');
+  if (el) el.textContent = getScannerUrl();
+}
+
+function copyScannerUrl() {
+  const url = getScannerUrl();
+  copyToClipboard(url)
+    .then(() => showToast('✓ Link scanner tersalin. Bagikan HANYA ke staff penerima tamu.', 'success'))
+    .catch(() => showToast('Gagal menyalin.', 'error'));
+}
+
+function shareScannerUrlWA() {
+  const url = getScannerUrl();
+  const msg = `Halo, ini link scanner untuk penerima tamu / petugas souvenir di pernikahan Cintya & Fathoni:\n\n${url}\n\nCara pakai:\n1. Buka link di HP\n2. Izinkan akses kamera\n3. Arahkan ke QR e-tiket tamu yang datang\n4. Sistem otomatis validasi - kalau hijau (VALID), beri souvenir. Kalau kuning (SUDAH DIPAKAI), tolak.\n\nSimpan link ini di favorit HP. Jangan share ke selain staff.`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+/* =========================================================
    WA MENU MODAL — quick send per nama
    Buka modal dengan grid tombol nama tamu. Klik nama -> langsung
    buka WA dengan pesan undangan untuk tamu itu.
@@ -6312,16 +7055,31 @@ if ('scrollRestoration' in history) {
 window.scrollTo(0, 0);
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Mode router via URL param — penting di-handle FIRST sebelum init lain.
+  const _params = new URLSearchParams(location.search);
+  // ?scanner=KEY -> mode scanner penerima tamu (perlu key yg cocok)
+  // Legacy: ?mode=scan tetap di-support tapi minta key juga
+  const _scannerKey = _params.get('scanner') || (_params.get('mode') === 'scan' ? _params.get('key') : null);
+  if (_scannerKey !== null) {
+    initScannerMode(_scannerKey);
+    return; // skip semua init undangan
+  }
+
   installImageErrorFallback();
   buildGuestDropdown();
   loadSheetContent();
-  // Fallback: kalau sheet lambat/gagal, audio tetap mulai pre-buffer setelah
-  // 1.5 detik pakai URL HTML default. Tujuan: pas user klik "Buka Undangan"
-  // (biasanya >3 detik baca cover), audio sudah siap putar tanpa stutter.
   setTimeout(preloadAudio, 1500);
   getGuestFromURL();
   setupReveal();
   renderWishes();
+  initQrSection();
+  // ?qr=TOKEN&n=NAME -> auto open QR modal (deep-link dari WA)
+  if (_params.get('qr')) {
+    const tk = _params.get('qr');
+    const nm = decodeURIComponent(_params.get('n') || '');
+    const ss = _params.get('sesi') || '';
+    setTimeout(() => showQrModalFor(nm || '(Tamu)', tk, ss), 800);
+  }
   setInterval(updateCountdown, 1000);
   updateCountdown();
   injectSectionDepth();
