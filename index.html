@@ -6,27 +6,34 @@
 <title>The Wedding of Cintya & Fathoni — 21.06.2026</title>
 
 <!-- ===== OPEN GRAPH / SOCIAL PREVIEW (WhatsApp, Facebook, Twitter, dll) =====
-     Saat link dishare di WA/sosmed, akan tampil thumbnail og-image.png +
-     title + description. CATATAN: WA hanya support raster (PNG/JPG/WebP)
-     untuk thumbnail preview — animasi SVG TIDAK akan jalan di preview.
-     SVG animated tersedia di assets/og-image.svg untuk pemakaian lain.
+     PENTING: URL og:image & og:url HARUS pakai domain yang SAMA dengan
+     domain tempat halaman di-host (undanganku.store), bukan domain GitHub
+     Pages, supaya WhatsApp render LARGE CARD (preview popup gambar besar
+     di atas link) — bukan thumbnail kecil di samping.
+
+     Aspect ratio 1200x630 (=1.91:1) WAJIB untuk trigger large card di WA/FB.
+     File harus PNG/JPG/static WebP — animated SVG / GIF / animated WebP
+     hanya tampil sbg first frame di link preview WhatsApp.
+     File ?v=N adalah cache buster — naikkan kalau WhatsApp masih cache lama.
 ============================================================================ -->
 <meta property="og:type"        content="website">
 <meta property="og:title"       content="The Wedding of Cintya & Fathoni — 21 Juni 2026">
 <meta property="og:description" content="Bismillah, dengan memohon rahmat Allah SWT kami mengundang Bapak/Ibu/Saudara/i untuk hadir di pernikahan kami. Klik untuk membuka undangan digital.">
-<meta property="og:image"       content="https://modernilham.github.io/UNDANGAN_PERNIKAHAN/assets/og-image.png">
+<meta property="og:image"       content="https://undanganku.store/assets/og-image.png?v=3">
+<meta property="og:image:secure_url" content="https://undanganku.store/assets/og-image.png?v=3">
+<meta property="og:image:type"  content="image/png">
 <meta property="og:image:width"  content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt"   content="Undangan Pernikahan Cintya & Fathoni — 21 Juni 2026">
-<meta property="og:url"         content="https://modernilham.github.io/UNDANGAN_PERNIKAHAN/">
+<meta property="og:url"         content="https://undanganku.store/">
 <meta property="og:locale"      content="id_ID">
 <meta property="og:site_name"   content="The Wedding of Cintya & Fathoni">
-<!-- Twitter Card (FYI dipakai juga oleh beberapa app) -->
+<!-- Twitter Card (FYI dipakai juga oleh beberapa app preview) -->
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="The Wedding of Cintya & Fathoni — 21 Juni 2026">
 <meta name="twitter:description" content="Klik untuk membuka undangan digital Cintya & Fathoni.">
-<meta name="twitter:image"       content="https://modernilham.github.io/UNDANGAN_PERNIKAHAN/assets/og-image.png">
-<!-- Favicon shortcut juga pakai og-image (mini) -->
+<meta name="twitter:image"       content="https://undanganku.store/assets/og-image.png?v=3">
+<!-- Favicon -->
 <link rel="icon" type="image/png" href="assets/og-image.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
