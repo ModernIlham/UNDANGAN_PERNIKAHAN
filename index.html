@@ -4372,10 +4372,7 @@ img[src$="loading.svg"] {
     <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #25D366">
       <strong style="font-size:12px;color:#128C7E">🔧 Diagnostic &amp; Tools</strong>
       <p style="font-size:11px;color:#1a4d2e;margin:4px 0 6px">Test koneksi Apps Script — kirim test redeem, tampilkan respons real dari server.</p>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="mini-btn" onclick="testScannerEndpoint()" style="background:#0d3d1d;color:#fff">▶ Test Konek Scanner</button>
-        <button class="mini-btn" onclick="copyAppsScriptCode()" style="background:#7a3d00;color:#fff">📋 Copy KODE Apps Script TERBARU</button>
-      </div>
+      <button class="mini-btn" onclick="testScannerEndpoint()" style="background:#0d3d1d;color:#fff">▶ Test Konek Scanner</button>
       <div id="scanner-test-result" style="margin-top:8px"></div>
     </div>
   </div>
@@ -6604,27 +6601,26 @@ function hideQrModal(event) {
   document.getElementById('qr-modal-overlay').classList.remove('show');
 }
 
-// Download e-tiket sebagai CARD lengkap (QR + branding + nama + tanggal)
-// supaya saat tersimpan di galeri HP gampang dikenali "ini e-tiket pernikahan".
-function downloadQrImage() {
-  if (typeof qrcode === 'undefined' || !_qrCurrentToken) {
-    showToast('QR belum ter-render', 'error');
-    return;
-  }
+// Helper: render e-tiket card ke Canvas dan return via Promise.
+// Dipakai oleh downloadQrImage() (untuk save) dan sendQrToWa() (untuk
+// auto-download lalu user attach ke WA).
+async function generateQrCardCanvas(name, token, session) {
+  if (typeof qrcode === 'undefined') throw new Error('QR library belum ter-load');
+  if (!token) throw new Error('Token kosong');
 
   // Generate QR data URL
   const qr = qrcode(0, 'M');
-  const qrUrl = `${location.origin}${location.pathname}?mode=scan&t=${_qrCurrentToken}&n=${encodeURIComponent(_qrCurrentName)}`;
+  const qrUrl = `${location.origin}${location.pathname}?mode=scan&t=${token}&n=${encodeURIComponent(name)}`;
   qr.addData(qrUrl);
   qr.make();
   const qrDataUrl = qr.createDataURL(10, 0);
 
-  // Ambil konten dinamis dari sheet (atau default)
+  // Konten dinamis dari sheet
   const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
   const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
-  const sessLabel   = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[_qrCurrentSession])
-                      || _qrCurrentSession || '';
+  const sessLabel   = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session])
+                      || session || '';
 
   // Compose card via Canvas (720x1080 portrait)
   const W = 720, H = 1080;
@@ -6681,68 +6677,75 @@ function downloadQrImage() {
   ctx.fillStyle = '#6b3d1c';
   ctx.fillText(eventDate, W/2, 240);
 
-  // Load QR as image, then draw, then save
-  const img = new Image();
-  img.onload = () => {
-    const qrSize = 440;
-    const qrX = (W - qrSize) / 2;
-    const qrY = 290;
-
-    // White rounded background for QR
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = GOLD;
-    ctx.lineWidth = 2;
-    const padding = 24;
-    roundRect(ctx, qrX - padding, qrY - padding, qrSize + padding*2, qrSize + padding*2, 12);
-    ctx.fill(); ctx.stroke();
-
-    // Draw QR
-    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-    // Guest name (large)
-    ctx.fillStyle = '#150a03';
-    ctx.font = '600 30px Georgia, serif';
-    ctx.fillText(_qrCurrentName, W/2, qrY + qrSize + 90);
-
-    // Session label
-    if (sessLabel) {
-      ctx.font = 'italic 18px Georgia, serif';
+  // Load QR sebagai image lalu draw + finalize secara async
+  await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const qrSize = 440;
+      const qrX = (W - qrSize) / 2;
+      const qrY = 290;
+      // White rounded background for QR
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 2;
+      const padding = 24;
+      roundRect(ctx, qrX - padding, qrY - padding, qrSize + padding*2, qrSize + padding*2, 12);
+      ctx.fill(); ctx.stroke();
+      // Draw QR
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+      // Guest name
+      ctx.fillStyle = '#150a03';
+      ctx.font = '600 30px Georgia, serif';
+      ctx.fillText(name, W/2, qrY + qrSize + 90);
+      // Session label
+      if (sessLabel) {
+        ctx.font = 'italic 18px Georgia, serif';
+        ctx.fillStyle = '#6b3d1c';
+        const truncSess = sessLabel.length > 50 ? sessLabel.slice(0, 47) + '...' : sessLabel;
+        ctx.fillText(truncSess, W/2, qrY + qrSize + 122);
+      }
+      // Token
+      ctx.font = '400 15px "Courier New", monospace';
+      ctx.fillStyle = '#8a5a2e';
+      ctx.fillText('TOKEN: ' + token, W/2, qrY + qrSize + 150);
+      // Footer
+      ctx.font = 'italic 14px Georgia, serif';
       ctx.fillStyle = '#6b3d1c';
-      const truncSess = sessLabel.length > 50 ? sessLabel.slice(0, 47) + '...' : sessLabel;
-      ctx.fillText(truncSess, W/2, qrY + qrSize + 122);
-    }
+      ctx.fillText('Tunjukkan kode ini kepada penerima tamu', W/2, H - 90);
+      ctx.fillText('untuk mendapatkan souvenir', W/2, H - 68);
+      // Tagline
+      ctx.font = '500 11px Georgia, serif';
+      ctx.fillStyle = GOLD;
+      ctx.fillText('WEDDING INVITATION  ·  ' + coupleNames.toUpperCase(), W/2, H - 45);
+      resolve(cv);
+    };
+    img.onerror = () => reject(new Error('Gagal load QR image'));
+    img.src = qrDataUrl;
+  });
+  return cv;
+}
 
-    // Token (monospace)
-    ctx.font = '400 15px "Courier New", monospace';
-    ctx.fillStyle = '#8a5a2e';
-    ctx.fillText('TOKEN: ' + _qrCurrentToken, W/2, qrY + qrSize + 150);
+// Helper: trigger download dari canvas
+function _downloadCanvasAsPng(canvas, filename) {
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
-    // Footer hint
-    ctx.font = 'italic 14px Georgia, serif';
-    ctx.fillStyle = '#6b3d1c';
-    ctx.fillText('Tunjukkan kode ini kepada penerima tamu', W/2, H - 90);
-    ctx.fillText('untuk mendapatkan souvenir', W/2, H - 68);
-
-    // Tagline
-    ctx.font = '500 11px Georgia, serif';
-    ctx.fillStyle = GOLD;
-    ctx.fillText('WEDDING INVITATION  ·  ' + coupleNames.toUpperCase(), W/2, H - 45);
-
-    // Download
-    const url = cv.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
+// User klik "Simpan Gambar" di modal QR -> download e-tiket card
+async function downloadQrImage() {
+  try {
+    const cv = await generateQrCardCanvas(_qrCurrentName, _qrCurrentToken, _qrCurrentSession);
     const safeName = String(_qrCurrentName).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    a.download = `e-tiket-${safeName}-${_qrCurrentToken}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    _downloadCanvasAsPng(cv, `e-tiket-${safeName}-${_qrCurrentToken}.png`);
     showToast('✓ E-tiket card ter-download — siap di-share / save ke galeri', 'success');
-  };
-  img.onerror = () => {
-    showToast('Gagal generate gambar QR', 'error');
-  };
-  img.src = qrDataUrl;
+  } catch (e) {
+    showToast('Gagal generate gambar: ' + e.message, 'error');
+  }
 }
 
 // Helper: rounded rectangle path
@@ -6770,7 +6773,7 @@ function hideQrSendModal(event) {
   document.getElementById('qr-send-overlay').classList.remove('show');
 }
 
-function sendQrToWa() {
+async function sendQrToWa() {
   const rawPhone = document.getElementById('qr-send-phone').value.trim();
   const phone = normalizePhone(rawPhone);
   if (!phone || phone.length < 10) {
@@ -6780,30 +6783,58 @@ function sendQrToWa() {
   const name = _qrCurrentName;
   const token = tokenForGuest(name);
   const params = new URLSearchParams(location.search);
-  const session = params.get('sesi') || '';
+  const session = _qrCurrentSession || params.get('sesi') || '';
   const sessLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session]) || session;
-  const qrPageUrl = `${location.origin}${location.pathname}?qr=${token}&n=${encodeURIComponent(name)}&sesi=${encodeURIComponent(session)}`;
-  const msg =
+
+  try {
+    // Generate e-tiket card image
+    const cv = await generateQrCardCanvas(name, token, session);
+    const safeName = String(name).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    const filename = `e-tiket-${safeName}-${token}.png`;
+    const blob = await new Promise(resolve => cv.toBlob(resolve, 'image/png'));
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    // Pesan ringkas — TIDAK ada link undangan, hanya intro + instruksi attach
+    const msg =
 `Halo *${safeNameForChat(name)}*,
 
 Terima kasih sudah konfirmasi kehadiran untuk pernikahan *Cintya & Fathoni*.
 
-Berikut e-tiket QR Anda — *tunjukkan ke penerima tamu saat tiba* untuk mendapatkan souvenir:
-
-🎫 Buka e-tiket:
-${qrPageUrl}
+Berikut *E-Tiket QR* Anda untuk pengambilan souvenir saat tiba di lokasi.
 
 Detail:
-*Nama :* ${safeNameForChat(name)}
-${sessLabel ? '*Sesi :* ' + sessLabel + '\n' : ''}*Token :* ${token}
+*Nama  :* ${safeNameForChat(name)}
+${sessLabel ? '*Sesi   :* ' + sessLabel + '\n' : ''}*Token :* ${token}
 
 Sampai jumpa di hari bahagia kami!
 
 Salam hangat,
 *Cintya & Fathoni*`;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  hideQrSendModal();
-  showToast('✓ Membuka WhatsApp untuk kirim e-tiket', 'success');
+
+    // Coba Web Share API dulu (mobile native, bisa langsung attach file)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: msg, title: 'E-Tiket QR Kehadiran' });
+        hideQrSendModal();
+        showToast('✓ E-tiket QR dibagikan. Pilih kontak WhatsApp untuk kirim.', 'success');
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') { hideQrSendModal(); return; }
+        // fall through ke download + buka WA chat
+      }
+    }
+
+    // Fallback: auto-download QR card + buka WA chat ke nomor itu
+    _downloadCanvasAsPng(cv, filename);
+    // Beri jeda kecil supaya download trigger duluan
+    setTimeout(() => {
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }, 400);
+    hideQrSendModal();
+    showToast(`✓ QR ter-download (${filename}). Buka WA → tap 📎 → pilih file QR yang baru di-download → kirim.`, 'success');
+  } catch (e) {
+    showToast('Gagal generate QR: ' + e.message, 'error');
+  }
 }
 
 /* ===== SCANNER MODE — penerima tamu (perlu kunci akses) ===== */
@@ -7009,168 +7040,6 @@ function shareScannerUrlWA() {
   const url = getScannerUrl();
   const msg = `Halo, ini link scanner untuk penerima tamu / petugas souvenir di pernikahan Cintya & Fathoni:\n\n${url}\n\nCara pakai:\n1. Buka link di HP\n2. Izinkan akses kamera\n3. Arahkan ke QR e-tiket tamu yang datang\n4. Sistem otomatis validasi - kalau hijau (VALID), beri souvenir. Kalau kuning (SUDAH DIPAKAI), tolak.\n\nSimpan link ini di favorit HP. Jangan share ke selain staff.`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-/* ===== COPY KODE APPS SCRIPT TERBARU ke clipboard =====
-   User paste ke Apps Script editor (Ctrl+A → Ctrl+V → Ctrl+S),
-   lalu Deploy → Manage deployments → pencil → New version → Deploy. */
-// SNIPPET ini di-MERGE ke Apps Script user (TIDAK replace seluruh script):
-// - Kalau user sudah punya doGet, GANTI seluruh function doGet dengan versi di sini
-// - Tambahkan SCANNER_KEY + 4 function (ensureAttendanceHeader_, redeemToken,
-//   registerToken, setupAttendanceSheet_) di paling bawah / paling atas script
-// CONTENT_DEFAULTS, setupContentSheet_, dll TIDAK perlu diubah.
-const APPS_SCRIPT_LATEST_CODE = String.raw`/* ===========================================================
- * SNIPPET TAMBAHAN untuk FITUR SCANNER QR
- * Cara pakai: paste di paling BAWAH Code.gs yang sudah ada.
- * Lalu GANTI function doGet lama dengan versi di sini.
- * Save (Ctrl+S) -> Deploy -> Manage deployments -> pencil ->
- * Version: New version -> Deploy.
- * =========================================================== */
-
-// === KUNCI SCANNER — HARUS sama dgn CONFIG.scannerKey di HTML ===
-const SCANNER_KEY = 'souvenir2026';
-
-// === GANTI function doGet yang ada dengan ini ===
-function doGet(e) {
-  const params = (e && e.parameter) || {};
-  // Scanner penerima tamu: redeem token
-  if (params.action === 'redeem') {
-    return redeemToken(params.token, params.name, params.key);
-  }
-  // Admin: pre-register token (opsional)
-  if (params.action === 'register') {
-    return registerToken(params.token, params.name, params.session, params.key);
-  }
-  // Default: konten + galeri + attendance
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const out = {
-    content: sheetToObject(ss.getSheetByName('Content')),
-    gallery: sheetToArray(ss.getSheetByName('Gallery')),
-    attendance: sheetToArray(ss.getSheetByName('Attendance'))
-  };
-  return ContentService.createTextOutput(JSON.stringify(out))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-// === Setup tab Attendance (panggil sekali dari menu / setupSheet) ===
-function setupAttendanceSheet_(ss) {
-  let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-  if (sh.getLastRow() === 0) {
-    sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-    sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
-    sh.setFrozenRows(1);
-    sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 240);
-    sh.setColumnWidth(3, 100); sh.setColumnWidth(4, 160); sh.setColumnWidth(5, 160);
-  }
-}
-
-function ensureAttendanceHeader_(sh) {
-  if (sh.getLastRow() === 0) {
-    sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-    sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
-    sh.setFrozenRows(1);
-  }
-}
-
-// === REDEEM token (dipanggil scanner penerima tamu) ===
-function redeemToken(token, name, key) {
-  if (!key || key !== SCANNER_KEY) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false, error: 'Unauthorized: scanner key tidak valid'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  if (!token) {
-    return ContentService.createTextOutput(JSON.stringify({success:false,error:'no token'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-  ensureAttendanceHeader_(sh);
-  const data = sh.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === token) {
-      const redeemedAt = data[i][4];
-      if (redeemedAt) {
-        return ContentService.createTextOutput(JSON.stringify({
-          success: true, alreadyRedeemed: true,
-          name: data[i][1] || name || '',
-          timestamp: new Date(redeemedAt).toISOString()
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-      const now = new Date();
-      sh.getRange(i + 1, 5).setValue(now);
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true, alreadyRedeemed: false,
-        name: data[i][1] || name || '', timestamp: now.toISOString()
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-  // Token belum terdaftar -> auto-register & langsung mark redeemed
-  const now = new Date();
-  sh.appendRow([token, name || '', '', now, now]);
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true, alreadyRedeemed: false,
-    name: name || '', timestamp: now.toISOString()
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-
-// === REGISTER token (admin pre-sync, opsional) ===
-function registerToken(token, name, session, key) {
-  if (!key || key !== SCANNER_KEY) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false, error: 'Unauthorized'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  if (!token) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false, error: 'no token'
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-  ensureAttendanceHeader_(sh);
-  const data = sh.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === token) {
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true, alreadyRegistered: true
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-  sh.appendRow([token, name || '', session || '', new Date(), '']);
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true, registered: true
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-`;
-
-function copyAppsScriptCode() {
-  copyToClipboard(APPS_SCRIPT_LATEST_CODE)
-    .then(() => {
-      showToast('✓ Snippet scanner tersalin. Buka Apps Script editor → merge ke Code.gs (lihat instruksi).', 'success');
-      const out = document.getElementById('scanner-test-result');
-      if (out) {
-        out.innerHTML = `
-          <div style="background:#fff8e1;padding:10px;border-radius:6px;border-left:3px solid #d2a857;color:#5a3a0a;font-size:12px;line-height:1.7">
-            <strong>📋 Snippet SCANNER tersalin ke clipboard.</strong><br>
-            <em>Ini snippet ADD-ON — bukan replace seluruh Code.gs (supaya CONTENT_DEFAULTS &amp; setup-mu aman).</em><br><br>
-            <strong>Langkah merge:</strong><br>
-            1. Buka Sheet → Extensions → <strong>Apps Script</strong><br>
-            2. Di file <code>Code.gs</code>, cari <strong>function doGet(e)</strong> yang lama<br>
-            3. <strong>HAPUS function doGet yang lama</strong> (dari kata "function doGet" sampai "}" penutupnya)<br>
-            4. <strong>Scroll ke paling bawah</strong> Code.gs<br>
-            5. <strong>Paste</strong> snippet dari clipboard (Ctrl+V)<br>
-            6. <strong>Save</strong> (Ctrl+S) — tunggu notif "Project saved"<br>
-            7. <strong>Deploy</strong> → <strong>Manage deployments</strong><br>
-            8. Klik pencil ✏️ di deployment aktif (BUKAN "New deployment")<br>
-            9. Version: pilih <strong>"New version"</strong> di dropdown<br>
-            10. Klik <strong>Deploy</strong><br>
-            11. Tutup dialog, klik <strong>▶ Test Konek Scanner</strong> di atas<br><br>
-            <strong>Tips kalau masih bingung:</strong> Apps Script TIDAK boleh punya 2 function bernama sama. Pastikan <code>doGet</code> cuma ada SATU (yang baru dari snippet ini).
-          </div>`;
-      }
-    })
-    .catch(() => showToast('Gagal menyalin kode', 'error'));
 }
 
 /* ===== TEST KONEK SCANNER — diagnostic untuk debug Apps Script ===== */
