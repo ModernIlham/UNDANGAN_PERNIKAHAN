@@ -5673,6 +5673,14 @@ function stripHtml(s) {
     .trim();
 }
 
+// Cegah WhatsApp auto-detect gelar seperti "S.Tr.", "M.si", "M.Sc.", "Dr.X"
+// sebagai URL (.tr / .si / .sc adalah TLD negara). Sisipkan zero-width space
+// U+200B di antara titik dan huruf — invisible di tampilan tapi memutus
+// pattern auto-link.
+function safeNameForChat(name) {
+  return String(name || '').replace(/\.([A-Za-z])/g, '.​$1');
+}
+
 // Normalisasi no HP Indonesia: 0812... / +62812... / 812... -> 62812...
 function normalizePhone(p) {
   let n = String(p || '').replace(/[^\d]/g, '');
@@ -5701,16 +5709,22 @@ function buildWAMessage(name, link, session) {
   // NOTE: emoji disengaja pakai yang selalu ter-render sbg color emoji
   // (📅 📍 🎫 — semua color emoji universal). Hindari emoji text-variant
   // (mis. U+1F5D3 calendar text) yg sering muncul sebagai '?' / kotak.
+  // Safe-escape nama-nama untuk cegah auto-link WhatsApp pada gelar
+  // (mis. "S.Tr.", "M.si", "M.Sc.") yg mengandung pattern dot+letter.
+  const safeName       = safeNameForChat(name);
+  const safeBride      = safeNameForChat(brideFull);
+  const safeGroom      = safeNameForChat(groomFull);
+  const safeCouple     = safeNameForChat(coupleShort);
   return (
 `Assalamu'alaikum Warahmatullahi Wabarakatuh
 
-Bapak/Ibu/Saudara/i *${name}* yang kami hormati,
+Bapak/Ibu/Saudara/i *${safeName}* yang kami hormati,
 
 Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud mengundang Bapak/Ibu/Saudara/i untuk turut hadir serta memberikan doa restu dalam acara pernikahan kami:
 
-*${brideFull}*
+*${safeBride}*
        —  &  —
-*${groomFull}*
+*${safeGroom}*
 
 📅  Tanggal: ${eventDate}
 📍  Tempat: ${venue}
@@ -5727,7 +5741,7 @@ Mohon maaf apabila undangan ini disampaikan melalui pesan WhatsApp. Atas perhati
 Wassalamu'alaikum Warahmatullahi Wabarakatuh
 
 Hormat kami,
-*${coupleShort}* beserta Keluarga`
+*${safeCouple}* beserta Keluarga`
   );
 }
 
@@ -5877,13 +5891,23 @@ function copyAllWALinks() {
     }).join('') +
     '</ol>';
 
-  // Plain text fallback: nomor + nama + sesi + URL di baris bawahnya
-  const plainList = items.map((it, i) =>
-    `${i + 1}. ${it.name} — ${it.session}${it.hasPhone ? '' : ' (no phone)'}\n   ${it.waUrl}`
-  ).join('\n\n');
+  // Plain text: ringkas, hanya daftar nama + sesi (tanpa URL panjang).
+  // Tujuan: untuk paste ke WhatsApp / Notepad sebagai checklist tamu.
+  // Untuk benar-benar kirim WA, pakai tombol WA per-tamu di list bawah,
+  // atau "Mulai WA Blast" untuk batch.
+  const safeName = (n) => safeNameForChat(n);
+  const plainList =
+    `DAFTAR TAMU UNDANGAN (${items.length})\n` +
+    '─────────────────────────\n' +
+    items.map((it, i) => {
+      const tag = it.hasPhone ? '' : ' (no HP)';
+      return `${i + 1}. ${safeName(it.name)} — ${it.session}${tag}`;
+    }).join('\n') +
+    '\n─────────────────────────\n' +
+    'Untuk kirim WA: buka admin → klik tombol WA per nama, atau "Mulai WA Blast".';
 
   copyToClipboardHTML(htmlList, plainList)
-    .then(() => showToast(`${items.length} nama tersalin. Paste ke Google Docs / Word / Notes — tiap nama bisa diklik.`, 'success'))
+    .then(() => showToast(`${items.length} nama tersalin. Paste ke Google Docs/Word/Notes → nama bisa diklik. Paste ke WhatsApp → hanya daftar (gunakan tombol WA admin untuk kirim).`, 'success'))
     .catch(() => showToast('Gagal menyalin. Coba browser lain (Chrome/Edge).', 'error'));
 }
 
