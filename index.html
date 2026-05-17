@@ -6871,6 +6871,46 @@ async function initScannerMode(providedKey) {
   startCameraScanner();
 }
 
+// ===== Halaman info untuk user yg scan QR via app scanner biasa =====
+// (bukan penerima tamu resmi yg pakai link ?scanner=KEY)
+function showQrInfoPage(token, name) {
+  document.body.innerHTML = `
+    <div style="min-height:100vh;background:linear-gradient(180deg,#faf0d8,#e8d4a8);display:flex;align-items:center;justify-content:center;padding:24px 16px;font-family:'Cormorant Garamond',serif;color:#150a03">
+      <div style="max-width:480px;width:100%;background:linear-gradient(180deg,#fff,#fdf6e3);border:2px solid #d4af64;border-radius:14px;padding:36px 26px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.15);position:relative">
+        <div style="position:absolute;top:14px;right:14px;left:14px;height:4px;background:linear-gradient(90deg,transparent,#d4af64,transparent);border-radius:2px"></div>
+        <div style="font-size:56px;line-height:1;margin-bottom:12px">🎫</div>
+        <h1 style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:3px;color:#6b3d1c;margin:0 0 4px;font-weight:600">E - T I K E T   Q R</h1>
+        <p style="font-family:'Mrs Saint Delafield',cursive;font-size:38px;color:#150a03;margin:6px 0 14px;line-height:1">Cintya &amp; Fathoni</p>
+        <div style="height:1px;background:linear-gradient(90deg,transparent,#d4af64,transparent);margin:18px 0"></div>
+        <p style="font-size:15px;line-height:1.6;color:#3a200f;margin:0 0 18px">
+          ${name ? 'Halo <strong>' + escapeHtml(name) + '</strong>! 👋' : 'Halo, Bapak/Ibu/Saudara/i!'}<br>
+          QR yang Anda scan adalah <strong>e-tiket pribadi tamu undangan</strong> untuk pengambilan souvenir.
+        </p>
+        <div style="background:#fff8e1;border-left:4px solid #d2a857;padding:12px 14px;text-align:left;font-size:13px;color:#5a3a0a;line-height:1.6;border-radius:6px;margin:20px 0">
+          <strong>ℹ️ Info Penting:</strong><br>
+          QR ini hanya dapat <strong>divalidasi oleh petugas penerima tamu resmi</strong> di lokasi acara dengan link scanner khusus. Tidak bisa di-scan sembarangan untuk klaim souvenir.
+        </div>
+        ${token ? `
+          <div style="background:#faf0d8;border:1px dashed #d4af64;border-radius:8px;padding:14px;margin:18px 0;font-family:'Courier New',monospace">
+            <div style="font-size:10px;color:#8a5a2e;letter-spacing:1px;margin-bottom:6px">TOKEN E-TIKET</div>
+            <div style="font-size:16px;font-weight:600;color:#150a03;letter-spacing:3px;word-break:break-all">${escapeHtml(token)}</div>
+            ${name ? `<div style="font-size:11px;color:#6b3d1c;margin-top:8px;font-family:'Cormorant Garamond',serif;font-style:italic">Atas nama: ${escapeHtml(name)}</div>` : ''}
+          </div>
+        ` : ''}
+        <div style="margin:24px 0 16px">
+          <a href="?${name ? 'to=' + encodeURIComponent(name) : ''}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#3a200f,#150a03);color:#e8d4a8;border:1px solid #d4af64;border-radius:6px;text-decoration:none;font-family:'Cinzel',serif;font-size:12px;letter-spacing:2.5px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.2)">
+            BUKA UNDANGAN
+          </a>
+        </div>
+        <p style="font-size:11px;color:#6b3d1c;line-height:1.7;margin:20px 0 0;padding-top:16px;border-top:1px solid #f0e0c0">
+          <strong style="color:#150a03">Untuk tamu undangan:</strong> simpan QR ini, tunjukkan ke penerima tamu saat tiba di lokasi.<br>
+          <strong style="color:#150a03">Untuk penerima tamu:</strong> gunakan link scanner resmi yang dibagikan admin, bukan scan via aplikasi HP biasa.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 function showScannerAccessDenied(wrongKey) {
   const page = document.getElementById('scanner-page');
   if (!page) return;
@@ -7404,12 +7444,20 @@ window.scrollTo(0, 0);
 window.addEventListener('DOMContentLoaded', () => {
   // Mode router via URL param — penting di-handle FIRST sebelum init lain.
   const _params = new URLSearchParams(location.search);
+  const _scannerKey = _params.get('scanner');
+  const _mode = _params.get('mode');
+  const _scanToken = _params.get('t');
+
   // ?scanner=KEY -> mode scanner penerima tamu (perlu key yg cocok)
-  // Legacy: ?mode=scan tetap di-support tapi minta key juga
-  const _scannerKey = _params.get('scanner') || (_params.get('mode') === 'scan' ? _params.get('key') : null);
   if (_scannerKey !== null) {
     initScannerMode(_scannerKey);
-    return; // skip semua init undangan
+    return;
+  }
+  // ?mode=scan (tanpa scanner key) -> orang awam buka QR via app scanner HP biasa
+  // Tampil halaman info ramah: jelaskan QR hanya bisa divalidasi penerima tamu
+  if (_mode === 'scan') {
+    showQrInfoPage(_scanToken || '', decodeURIComponent(_params.get('n') || ''));
+    return;
   }
 
   installImageErrorFallback();
