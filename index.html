@@ -5256,6 +5256,48 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* =========================================================
+   AUTO PAUSE/RESUME MUSIC saat keluar / kembali ke undangan
+   - Saat tab hidden (pindah app, screen off, switch tab) -> pause
+   - Saat tab visible lagi -> resume kalau tadinya playing
+   - Kalau user pause manual sebelum hide, tidak auto-resume
+   ========================================================= */
+let wasPlayingBeforeHide = false;
+
+document.addEventListener('visibilitychange', () => {
+  const audio = document.getElementById('bg-music');
+  if (!audio) return;
+  if (document.hidden) {
+    // Keluar dari tab/app: ingat state, lalu pause kalau lagi playing
+    wasPlayingBeforeHide = isPlaying;
+    if (isPlaying && !audio.paused) {
+      audio.pause();
+      // NOTE: sengaja TIDAK ubah isPlaying / class .playing supaya
+      // UI tombol musik tetap menunjukkan status playing dan resume
+      // mulus tanpa user perlu klik ulang.
+    }
+  } else {
+    // Kembali ke tab/app: resume kalau tadinya playing
+    if (wasPlayingBeforeHide && audio.paused) {
+      audio.play().catch(() => {
+        // Browser mobile kadang block resume setelah lama hidden.
+        // Kalau gagal, user perlu tap tombol musik manual.
+      });
+    }
+  }
+});
+
+// pageshow fires saat halaman di-restore dari bfcache (Safari back/forward).
+// Penting untuk iOS supaya resume juga jalan dari bfcache restore.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) {
+    const audio = document.getElementById('bg-music');
+    if (audio && wasPlayingBeforeHide && audio.paused) {
+      audio.play().catch(() => {});
+    }
+  }
+});
+
+/* =========================================================
    COUNTDOWN
    ========================================================= */
 function updateCountdown() {
