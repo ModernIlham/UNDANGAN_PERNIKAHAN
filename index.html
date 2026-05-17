@@ -6122,54 +6122,77 @@ function copyToClipboardHTML(html, plainText) {
   return copyToClipboard(plainText);
 }
 
-// Copy semua tamu sebagai daftar nama CLICKABLE (HTML hyperlink). Saat di-paste
-// ke Google Docs / Word / Notion / Notes / Email → tiap nama jadi link yg bisa
-// langsung diklik buka tab WA siap kirim. Fallback plain text bernomor untuk
-// tekstapps yang tidak terima HTML.
-function copyAllWALinks() {
+// Shorten URL via TinyURL public API (no API key needed).
+// Fallback ke URL asli kalau gagal (CORS/network/rate limit).
+async function shortenUrl(longUrl) {
+  try {
+    const r = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
+    if (!r.ok) return longUrl;
+    const txt = (await r.text()).trim();
+    if (/^https?:\/\//.test(txt)) return txt;
+  } catch (e) { /* CORS / offline / dll → fallback */ }
+  return longUrl;
+}
+
+// Copy semua tamu sebagai LIST PENDEK — tiap nama + link pendek (TinyURL).
+// Saat di-paste ke chat WA: tampil compact spt menu, klik link di sebelah
+// nama langsung buka WA dengan pesan undangan untuk tamu itu siap kirim.
+async function copyAllWALinks() {
   const guests = getGuestList();
   if (guests.length === 0) {
     showToast('Belum ada tamu.', 'error');
     return;
   }
+
+  showToast(`Memendekkan ${guests.length} link via TinyURL... tunggu sebentar`, 'success');
+
   const baseUrl = window.location.origin + window.location.pathname;
-  const items = guests.map(g => {
+  // Generate semua long URL + shorten paralel
+  const items = await Promise.all(guests.map(async g => {
     const link = `${baseUrl}?to=${encodeURIComponent(g.name)}&sesi=${encodeURIComponent(g.session)}`;
     const phone = g.phone ? normalizePhone(g.phone) : '';
     const msg = buildWAMessage(g.name, link, g.session);
-    const waUrl = phone
+    const longUrl = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    return { name: g.name, session: g.session, hasPhone: !!phone, waUrl };
-  });
+    const shortUrl = await shortenUrl(longUrl);
+    return { name: g.name, session: g.session, hasPhone: !!phone, shortUrl, longUrl };
+  }));
 
-  // HTML: daftar nama jadi hyperlink, dengan tag sesi di belakang
+  // Hitung berapa yang berhasil di-shorten
+  const shortened = items.filter(it => it.shortUrl !== it.longUrl).length;
+
+  // ===== HTML format (untuk paste ke Google Docs / Word / Notion) =====
+  // Nama jadi hyperlink. Tag sesi di belakang.
   const htmlList =
-    '<ol style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7">' +
+    '<ol style="font-family:Arial,sans-serif;font-size:14px;line-height:1.8">' +
     items.map(it => {
       const tag = it.hasPhone ? '' : ' (pilih kontak manual)';
-      return `<li><a href="${escapeAttr(it.waUrl)}">${escapeHtml(it.name)}</a> — <em>${escapeHtml(it.session)}</em>${tag}</li>`;
+      return `<li><a href="${escapeAttr(it.shortUrl)}"><strong>${escapeHtml(it.name)}</strong></a> — <em>${escapeHtml(it.session)}</em>${tag}</li>`;
     }).join('') +
     '</ol>';
 
-  // Plain text: ringkas, hanya daftar nama + sesi (tanpa URL panjang).
-  // Tujuan: untuk paste ke WhatsApp / Notepad sebagai checklist tamu.
-  // Untuk benar-benar kirim WA, pakai tombol WA per-tamu di list bawah,
-  // atau "Mulai WA Blast" untuk batch.
+  // ===== Plain text format (untuk paste ke WA chat) =====
+  // Nama bold + link pendek di bawahnya. Klik link = buka WA siap kirim.
   const safeName = (n) => safeNameForChat(n);
   const plainList =
-    `DAFTAR TAMU UNDANGAN (${items.length})\n` +
-    '─────────────────────────\n' +
+    `*KLIK LINK DI BAWAH NAMA UNTUK KIRIM UNDANGAN*\n` +
+    `_____________________________________\n\n` +
     items.map((it, i) => {
-      const tag = it.hasPhone ? '' : ' (no HP)';
-      return `${i + 1}. ${safeName(it.name)} — ${it.session}${tag}`;
-    }).join('\n') +
-    '\n─────────────────────────\n' +
-    'Untuk kirim WA: buka admin → klik tombol WA per nama, atau "Mulai WA Blast".';
+      const tag = it.hasPhone ? '' : '  (pilih kontak)';
+      return `*${i + 1}. ${safeName(it.name)}*  —  ${it.session}${tag}\n      ${it.shortUrl}`;
+    }).join('\n\n') +
+    `\n\n_____________________________________\n` +
+    `Total ${items.length} tamu`;
 
   copyToClipboardHTML(htmlList, plainList)
-    .then(() => showToast(`${items.length} nama tersalin. Paste ke Google Docs/Word/Notes → nama bisa diklik. Paste ke WhatsApp → hanya daftar (gunakan tombol WA admin untuk kirim).`, 'success'))
-    .catch(() => showToast('Gagal menyalin. Coba browser lain (Chrome/Edge).', 'error'));
+    .then(() => {
+      const note = shortened === items.length
+        ? `✓ ${items.length} link tersalin (short URL).`
+        : `✓ ${items.length} link tersalin (${shortened} pendek, ${items.length - shortened} fallback panjang).`;
+      showToast(`${note} Paste ke WA chat — klik link di tiap nama untuk kirim.`, 'success');
+    })
+    .catch(() => showToast('Gagal menyalin. Coba browser lain.', 'error'));
 }
 
 function exportCSV() {
