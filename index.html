@@ -6,23 +6,25 @@
 <title>The Wedding of Cintya & Fathoni — 21.06.2026</title>
 
 <!-- ===== OPEN GRAPH / SOCIAL PREVIEW (WhatsApp, Facebook, Twitter, dll) =====
-     Berdasarkan analisa undangan WhatsApp yang TERBUKTI muncul LARGE CARD,
-     resep yang berhasil di WhatsApp:
-       - og:image PORTRAIT  ~800x1200 (rasio 2:3) — bukan square / wide
-       - og:image:type image/jpeg (JPEG, bukan PNG)
-       - og:type = "article"  (bukan "website")
-     Square (1:1) atau wide (1.91:1) -> WA render small thumbnail samping.
+     CATATAN TESTING (terbukti dari user):
+       - WhatsApp Desktop / WA Web: SELALU render link preview sbg small
+         thumbnail samping, terlepas dari aspect ratio image. Itu memang
+         default behavior WA Desktop.
+       - WhatsApp Mobile (Android/iOS): render LARGE CARD (gambar di atas)
+         dengan og:image apapun rasio (square / portrait / wide).
+     Jadi test preview HARUS pakai WA Mobile, bukan WA Web/Desktop.
 
-     Domain og:image HARUS sama dengan domain hosting (undanganku.store).
+     Setup square 1200x1200 PNG = aman untuk semua platform (FB / Twitter /
+     WhatsApp Mobile tampil large). og:type "article" terbukti work.
      ?v=N cache buster — naikkan kalau WA masih cache lama.
 ============================================================================ -->
 <meta property="og:type"        content="article">
 <meta property="og:title"       content="The Wedding of Cintya & Fathoni — 21 Juni 2026">
 <meta property="og:description" content="Bismillah, dengan memohon rahmat Allah SWT kami mengundang Bapak/Ibu/Saudara/i untuk hadir di pernikahan kami. Klik untuk membuka undangan digital.">
-<meta property="og:image"       content="https://undanganku.store/assets/og-image.jpg?v=5">
-<meta property="og:image:secure_url" content="https://undanganku.store/assets/og-image.jpg?v=5">
-<meta property="og:image:type"  content="image/jpeg">
-<meta property="og:image:width"  content="800">
+<meta property="og:image"       content="https://undanganku.store/assets/og-image.png?v=6">
+<meta property="og:image:secure_url" content="https://undanganku.store/assets/og-image.png?v=6">
+<meta property="og:image:type"  content="image/png">
+<meta property="og:image:width"  content="1200">
 <meta property="og:image:height" content="1200">
 <meta property="og:image:alt"   content="Undangan Pernikahan Cintya & Fathoni — 21 Juni 2026">
 <meta property="og:url"         content="https://undanganku.store/">
@@ -32,8 +34,8 @@
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="The Wedding of Cintya & Fathoni — 21 Juni 2026">
 <meta name="twitter:description" content="Klik untuk membuka undangan digital Cintya & Fathoni.">
-<meta name="twitter:image"       content="https://undanganku.store/assets/og-image.jpg?v=5">
-<!-- Favicon (PNG masih ada di assets/og-image.png buat icon kecil) -->
+<meta name="twitter:image"       content="https://undanganku.store/assets/og-image.png?v=6">
+<!-- Favicon -->
 <link rel="icon" type="image/png" href="assets/og-image.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
