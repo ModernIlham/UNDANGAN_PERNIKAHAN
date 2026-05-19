@@ -2203,6 +2203,25 @@ body.scanner-mode > #scanner-page {
   text-transform: uppercase;
 }
 
+/* Sentinel lazy-load di .wishes-list (info batch & status selesai) */
+.wishes-load-sentinel {
+  text-align: center;
+  color: var(--sogan);
+  font-size: 9.5px;
+  letter-spacing: 1.4px;
+  font-family: 'Cinzel', serif;
+  padding: 10px 12px;
+  margin: 0;
+  opacity: 0.72;
+  background: rgba(184, 135, 70, 0.05);
+  text-transform: uppercase;
+  border-top: 1px dashed rgba(184, 135, 70, 0.25);
+}
+.wishes-load-sentinel.is-done {
+  opacity: 0.55;
+  background: transparent;
+}
+
 /* =========================================================
    ADMIN PANEL
    ========================================================= */
@@ -5297,12 +5316,13 @@ img[src$="loading.svg"] {
      if (params.action === 'register') {
        return registerToken(params.token, params.name, params.session, params.key);
      }
-     // Default: return konten + galeri + attendance (untuk badge HADIR di buku tamu)
+     // Default: return konten + galeri + attendance + rsvp (untuk buku tamu publik)
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      const out = {
        content: sheetToObject(ss.getSheetByName('Content')),
        gallery: sheetToArray(ss.getSheetByName('Gallery')),
-       attendance: sheetToArray(ss.getSheetByName('Attendance'))
+       attendance: sheetToArray(ss.getSheetByName('Attendance')),
+       rsvp: sheetToArray(ss.getSheetByName('RSVP'))
      };
      return ContentService.createTextOutput(JSON.stringify(out))
        .setMimeType(ContentService.MimeType.JSON);
@@ -5608,6 +5628,9 @@ let SHEET_CONTENT_MAP = {};
 // Map nama tamu (lowercase) -> info attendance dari tab "Attendance" (token sudah di-redeem).
 // Dipakai untuk render badge "✓ HADIR" di section UCAPAN & DOA (buku tamu).
 let SHEET_ATTENDANCE_MAP = {};
+// Daftar ucapan & doa dari tab "RSVP" supaya tamu lain bisa membaca (buku tamu publik).
+// Sudah di-sort newest-first saat di-set di loadSheetContent().
+let SHEET_RSVP_LIST = [];
 
 async function loadSheetContent() {
   if (!CONFIG.SHEET_DATA_URL) return;
@@ -5628,7 +5651,21 @@ async function loadSheetContent() {
         name: row.name || row.first_seen_name || ''
       };
     });
-    // Re-render wishes supaya badge "Sudah Hadir" muncul
+    // Build RSVP list (buku tamu publik) — hanya yang punya pesan ucapan/doa.
+    // Sheet header lowercase: timestamp, invitedto, name, attendance, guests, session, message
+    SHEET_RSVP_LIST = (data.rsvp || [])
+      .filter(row => row && String(row.message || '').trim() !== '')
+      .map(row => ({
+        timestamp: row.timestamp || '',
+        invitedTo: row.invitedto || row.invitedTo || '',
+        name: row.name || '',
+        attendance: row.attendance || '',
+        guests: row.guests || '',
+        session: row.session || '',
+        message: row.message || '',
+        source: 'sheet'
+      }));
+    // Re-render wishes supaya badge "Sudah Hadir" + data spreadsheet ikut tampil
     if (typeof renderWishes === 'function') renderWishes();
     if (typeof getGuestFromURL === 'function') getGuestFromURL();
   } catch (err) {
@@ -6357,7 +6394,7 @@ function submitRSVP(e) {
       submitBtn.textContent = originalLabel;
     }, 2400);
   }
-  showToast('✓ Konfirmasi berhasil dikirim. Terima kasih 🙏', 'success');
+  showToast('✓ Konfirmasi berhasil dikirim. Ucapan Anda akan tampil di buku tamu setelah halaman dimuat ulang 🙏', 'success');
 
   // Setelah submit, tawarkan kirim e-tiket QR ke WA tamu (kalau hadir/ragu)
   if (attendance === 'Hadir' || attendance === 'Masih Ragu') {
@@ -6403,10 +6440,87 @@ function renderWishItem(w, sampleClass) {
   `;
 }
 
+/* =========================================================
+   WISHES — buku tamu publik (lazy load on scroll)
+   Sumber data:
+     1) localStorage  -> RSVP yang baru dikirim tamu di browser ini
+     2) SHEET_RSVP_LIST -> semua RSVP dari spreadsheet (publik)
+   Merge + dedupe (pakai key timestamp|name) + sort timestamp DESC.
+   Render batch awal WISH_BATCH_SIZE entri, append batch berikutnya
+   saat user scroll mendekati bawah .wishes-list.
+   ========================================================= */
+const WISH_BATCH_SIZE = 10;     // jumlah entri per batch lazy load
+const WISH_SCROLL_THRESHOLD = 80; // px dari bawah -> trigger load batch berikutnya
+let WISH_RENDERED_COUNT = 0;
+let WISH_MERGED_CACHE = [];
+let WISH_SCROLL_HANDLER_BOUND = false;
+
+function timestampValue(ts) {
+  if (!ts) return 0;
+  const d = new Date(ts);
+  const n = d.getTime();
+  return isNaN(n) ? 0 : n;
+}
+
+function getMergedWishes() {
+  const local = (typeof getRSVPs === 'function' ? getRSVPs() : [])
+    .filter(r => r && String(r.message || '').trim() !== '')
+    .map(r => Object.assign({}, r, { source: r.source || 'local' }));
+  const sheet = Array.isArray(SHEET_RSVP_LIST) ? SHEET_RSVP_LIST : [];
+  const map = new Map();
+  // Prioritas: sheet dulu (data publik resmi dengan timestamp server),
+  // lalu local. Dedup pakai name + message-slice supaya entri yang sama
+  // (dari localStorage si pengirim DAN dari sheet) tidak dobel — clock client
+  // & server selalu beda beberapa detik jadi timestamp tidak bisa dipakai sbg key.
+  [...sheet, ...local].forEach(w => {
+    const nmKey = String(w.name || '').trim().toLowerCase();
+    const msgKey = String(w.message || '').trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 80);
+    const key = `${nmKey}|${msgKey}`;
+    // Sheet entry (yang lebih dulu di-set) menang — local hanya dipakai
+    // kalau memang belum ada di sheet (mis. baru saja submit, sheet belum re-fetch).
+    if (!map.has(key)) map.set(key, w);
+  });
+  return Array.from(map.values()).sort((a, b) => timestampValue(b.timestamp) - timestampValue(a.timestamp));
+}
+
+function attachWishScrollLoader(container) {
+  if (WISH_SCROLL_HANDLER_BOUND) return;
+  WISH_SCROLL_HANDLER_BOUND = true;
+  container.addEventListener('scroll', () => {
+    if (WISH_RENDERED_COUNT >= WISH_MERGED_CACHE.length) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom <= WISH_SCROLL_THRESHOLD) {
+      appendNextWishBatch(container);
+    }
+  }, { passive: true });
+}
+
+function appendNextWishBatch(container) {
+  const next = WISH_MERGED_CACHE.slice(WISH_RENDERED_COUNT, WISH_RENDERED_COUNT + WISH_BATCH_SIZE);
+  if (next.length === 0) return;
+  // Hapus sentinel "loading" lama (kalau ada)
+  const oldSentinel = container.querySelector('.wishes-load-sentinel');
+  if (oldSentinel) oldSentinel.remove();
+  const html = next.map(w => renderWishItem(w)).join('');
+  container.insertAdjacentHTML('beforeend', html);
+  WISH_RENDERED_COUNT += next.length;
+  // Tambahkan sentinel baru kalau masih ada sisa
+  if (WISH_RENDERED_COUNT < WISH_MERGED_CACHE.length) {
+    container.insertAdjacentHTML('beforeend',
+      `<div class="wishes-load-sentinel">Scroll untuk memuat lainnya… (${WISH_RENDERED_COUNT}/${WISH_MERGED_CACHE.length})</div>`);
+  } else {
+    container.insertAdjacentHTML('beforeend',
+      `<div class="wishes-load-sentinel is-done">— Semua ucapan ditampilkan (${WISH_MERGED_CACHE.length}) —</div>`);
+  }
+}
+
 function renderWishes() {
-  const wishes = getRSVPs().filter(r => r.message);
   const container = document.getElementById('wishes-list');
-  if (wishes.length === 0) {
+  if (!container) return;
+  WISH_MERGED_CACHE = getMergedWishes();
+  WISH_RENDERED_COUNT = 0;
+  // Tidak ada satu pun ucapan -> tampilkan contoh tampilan (sample only).
+  if (WISH_MERGED_CACHE.length === 0) {
     const samples = SAMPLE_WISHES.map(w => renderWishItem(w, 'is-sample')).join('');
     container.innerHTML = `
       <p class="wishes-sample-note">— Contoh tampilan ucapan &amp; doa —</p>
@@ -6414,7 +6528,11 @@ function renderWishes() {
     `;
     return;
   }
-  container.innerHTML = wishes.slice().reverse().map(w => renderWishItem(w)).join('');
+  // Reset scroll position supaya entri terbaru terlihat di atas.
+  container.scrollTop = 0;
+  container.innerHTML = '';
+  appendNextWishBatch(container);
+  attachWishScrollLoader(container);
 }
 
 function escapeHtml(s) {
