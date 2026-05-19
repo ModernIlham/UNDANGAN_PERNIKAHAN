@@ -4584,7 +4584,7 @@ img[src$="loading.svg"] {
       <button class="add-btn" onclick="wablastAll()" style="flex:1;min-width:160px">Mulai WA Blast (semua No HP)</button>
       <button class="add-btn" onclick="showWaMenu()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#25D366,#128C7E)">Menu Kirim per Nama</button>
       <button class="add-btn" onclick="copyAllWALinks()" style="flex:1;min-width:160px;background:linear-gradient(135deg,var(--sogan),var(--sogan-dark))">Copy semua link WA</button>
-      <button class="add-btn" onclick="printAllPhysicalCards()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#6b3d1c,#3a200f)">🖨 Cetak Semua (A4 4-up)</button>
+      <button class="add-btn" onclick="printAllPhysicalCards()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#6b3d1c,#3a200f)">🖨 Cetak Semua (A4 6-up)</button>
     </div>
     <p style="font-size:11px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
       <strong>WA Blast mode SEQUENTIAL:</strong> klik "Mulai" — muncul tombol "Kirim ke [Nama]". Tiap klik buka 1 tab WhatsApp (1 user-gesture = aman dari popup blocker). Setelah klik Send di tab WA, balik ke sini, klik tombol "Kirim ke" berikutnya. Bisa lanjut puluhan/ratusan tamu tanpa ke-block.
@@ -6828,8 +6828,8 @@ function printPhysicalCard(idx) {
     showToast('Tamu tidak ditemukan', 'error');
     return;
   }
-  // 4 copy tamu yang sama supaya 1 A4 = 4 kartu (ada cadangan)
-  openPrintWindow([g, g, g, g]);
+  // Mode 'single' — 1 kartu = 1 page (ukuran sama dengan 1 bagian bulk)
+  openPrintWindow([g], 'single');
 }
 
 function printAllPhysicalCards() {
@@ -6838,10 +6838,12 @@ function printAllPhysicalCards() {
     showToast('Belum ada tamu untuk dicetak', 'error');
     return;
   }
-  openPrintWindow(guests);
+  // Mode 'bulk' — 6 kartu per A4 (2 kolom × 3 baris)
+  openPrintWindow(guests, 'bulk');
 }
 
-function openPrintWindow(guests) {
+function openPrintWindow(guests, mode) {
+  mode = mode === 'single' ? 'single' : 'bulk';
   if (typeof qrcode === 'undefined') {
     showToast('QR library belum ter-load. Refresh halaman & coba lagi.', 'error');
     return;
@@ -6871,40 +6873,48 @@ function openPrintWindow(guests) {
     };
   });
 
-  // Group 4 cards per A4 page (2x2 grid)
-  const pages = [];
-  for (let i = 0; i < cards.length; i += 4) pages.push(cards.slice(i, i + 4));
-
-  const pagesHtml = pages.map(pg => {
-    const cardsHtml = pg.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
-    const padCount = 4 - pg.length;
-    const padHtml = padCount > 0
-      ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
-      : '';
-    return '<div class="a4-page">' + cardsHtml + padHtml + '</div>';
-  }).join('');
+  let bodyHtml;
+  let toolbarLabel;
+  if (mode === 'single') {
+    // Tiap kartu = halaman sendiri (ukuran 105×99mm, sama dgn 1 bagian bulk)
+    bodyHtml = cards.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
+    toolbarLabel = cards.length + ' kartu · format single (105×99mm per kartu)';
+  } else {
+    // Group 6 per A4 (2 kolom × 3 baris)
+    const pages = [];
+    for (let i = 0; i < cards.length; i += 6) pages.push(cards.slice(i, i + 6));
+    bodyHtml = pages.map(pg => {
+      const cardsHtml = pg.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
+      const padCount = 6 - pg.length;
+      const padHtml = padCount > 0
+        ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
+        : '';
+      return '<div class="a4-page">' + cardsHtml + padHtml + '</div>';
+    }).join('');
+    toolbarLabel = cards.length + ' kartu · A4, 6 kartu per halaman (2×3)';
+  }
 
   const html = '<!DOCTYPE html>\n<html lang="id">\n<head>\n' +
     '<meta charset="utf-8">\n' +
     '<title>Cetak Undangan Fisik &mdash; ' + cards.length + ' kartu</title>\n' +
     '<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Pinyon+Script&display=swap" rel="stylesheet">\n' +
-    '<style>' + buildPrintCss(assetBase) + '</style>\n' +
+    '<style>' + buildPrintCss(assetBase, mode) + '</style>\n' +
     '</head>\n<body>\n' +
     '<div class="print-toolbar">' +
-      '<strong>' + cards.length + ' kartu undangan fisik</strong>' +
-      '<span style="opacity:.7">&nbsp;·&nbsp; A4, 4 kartu per halaman &nbsp;·&nbsp; lipat di garis putus-putus</span>' +
+      '<strong>' + toolbarLabel + '</strong>' +
+      '<span style="opacity:.7">&nbsp;·&nbsp; lipat di garis putus-putus</span>' +
       '<span style="flex:1"></span>' +
       '<button onclick="window.print()" class="print-btn-action">🖨 Cetak / Save PDF</button>' +
       '<button onclick="window.close()">Tutup</button>' +
     '</div>\n' +
-    '<div class="pages-wrap">\n' + pagesHtml + '\n</div>\n' +
+    '<div class="pages-wrap">\n' + bodyHtml + '\n</div>\n' +
     '</body>\n</html>';
 
   w.document.open();
   w.document.write(html);
   w.document.close();
 
-  showToast('✓ ' + cards.length + ' kartu siap cetak. Klik tombol "Cetak" di window baru.', 'success');
+  showToast('✓ ' + cards.length + ' kartu siap cetak. Klik "Cetak" di window baru.', 'success');
 }
 
 function buildPrintCardHtml(c, coupleNames, eventDate) {
@@ -6936,63 +6946,69 @@ function buildPrintCardHtml(c, coupleNames, eventDate) {
   '</div>';
 }
 
-function buildPrintCss(assetBase) {
+function buildPrintCss(assetBase, mode) {
+  // Bulk: A4 portrait, grid 2 kolom × 3 baris → 6 kartu per halaman, tiap kartu 105×99mm
+  // Single: 1 kartu per halaman, page size = 105×99mm (sama dengan 1 bagian bulk)
+  const isBulk = mode !== 'single';
+  const pageSize = isBulk ? 'A4 portrait' : '105mm 99mm';
+
   return (
-    '@page { size: A4 portrait; margin: 0; }' +
+    '@page { size: ' + pageSize + '; margin: 0; }' +
     '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }' +
     'html, body { margin: 0; padding: 0; font-family: "Cormorant Garamond", Georgia, serif; color: #150a03; }' +
 
-    /* Screen preview (sebelum print) */
+    /* Screen preview */
     '@media screen {' +
       'body { background: #3a2a1a; padding: 60px 16px 24px; }' +
-      '.a4-page { box-shadow: 0 6px 30px rgba(0,0,0,0.6); margin: 0 auto 24px; background: #fff; }' +
+      '.a4-page, .physical-card.single-page { box-shadow: 0 6px 30px rgba(0,0,0,0.6); margin: 0 auto 24px; background: #fff; }' +
     '}' +
-    /* Print mode */
+    /* Print */
     '@media print {' +
       '.print-toolbar { display: none !important; }' +
       'body { background: #fff; padding: 0; }' +
+      (isBulk ? '' : '.physical-card { page-break-after: always; } .physical-card:last-child { page-break-after: auto; }') +
     '}' +
 
-    /* Toolbar (preview screen) */
+    /* Toolbar (preview) */
     '.print-toolbar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(180deg, #1a0f06, #0a0502); color: #e8d4a8; padding: 12px 16px; font-family: Georgia, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 8px; z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }' +
     '.print-toolbar button { padding: 8px 14px; background: #c9a25a; color: #150a03; border: 1px solid #b88c47; border-radius: 4px; font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 1.5px; font-weight: 600; cursor: pointer; }' +
     '.print-toolbar .print-btn-action { background: #d4af64; }' +
 
-    /* A4 page: 2x2 grid of 4 cards */
-    '.a4-page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; page-break-after: always; background: #fff; }' +
+    /* A4 page (bulk): 2 kolom × 3 baris = 6 kartu */
+    '.a4-page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; page-break-after: always; background: #fff; }' +
     '.a4-page:last-child { page-break-after: auto; }' +
 
-    /* Individual card (1/4 A4 = 105 x 148.5 mm) */
-    '.physical-card { width: 105mm; height: 148.5mm; padding: 5mm 4mm; display: flex; flex-direction: column; position: relative; background: linear-gradient(180deg, #faf0d8, #e8d4a8); border: 0.5pt solid #c9a25a; overflow: hidden; }' +
+    /* Individual card (1/6 A4 = 105 × 99 mm) */
+    '.physical-card { width: 105mm; height: 99mm; padding: 3.5mm 3mm; display: flex; flex-direction: column; position: relative; background: linear-gradient(180deg, #faf0d8, #e8d4a8); border: 0.5pt solid #c9a25a; overflow: hidden; }' +
     '.physical-card-empty { background: transparent; border: 0.5pt dashed #c9a25a; }' +
     '.physical-card-empty * { display: none; }' +
-    '.physical-card::before { content: ""; position: absolute; inset: 0; background-image: url("' + assetBase + 'batik-tile.png"); background-size: 80px; opacity: 0.07; mix-blend-mode: multiply; pointer-events: none; }' +
+    '.physical-card::before { content: ""; position: absolute; inset: 0; background-image: url("' + assetBase + 'batik-tile.png"); background-size: 70px; opacity: 0.06; mix-blend-mode: multiply; pointer-events: none; }' +
 
-    /* Corner ornaments */
-    '.card-corner { position: absolute; width: 12mm; height: 12mm; background: url("' + assetBase + 'corner-02.webp") center/contain no-repeat; opacity: 0.6; z-index: 1; }' +
-    '.corner-tl { top: 2mm; left: 2mm; }' +
-    '.corner-tr { top: 2mm; right: 2mm; transform: scaleX(-1); }' +
-    '.corner-bl { bottom: 2mm; left: 2mm; transform: scaleY(-1); }' +
-    '.corner-br { bottom: 2mm; right: 2mm; transform: scale(-1, -1); }' +
+    /* Corner ornaments — lebih kecil supaya muat di kartu 99mm */
+    '.card-corner { position: absolute; width: 9mm; height: 9mm; background: url("' + assetBase + 'corner-02.webp") center/contain no-repeat; opacity: 0.55; z-index: 1; }' +
+    '.corner-tl { top: 1.5mm; left: 1.5mm; }' +
+    '.corner-tr { top: 1.5mm; right: 1.5mm; transform: scaleX(-1); }' +
+    '.corner-bl { bottom: 1.5mm; left: 1.5mm; transform: scaleY(-1); }' +
+    '.corner-br { bottom: 1.5mm; right: 1.5mm; transform: scale(-1, -1); }' +
 
     /* Card halves: top + bottom side dipisah fold line */
-    '.card-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 2; padding: 1mm 2mm; min-height: 0; }' +
+    '.card-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 2; padding: 0.5mm 1mm; min-height: 0; gap: 0.3mm; }' +
     '.card-bottom { transform: rotate(180deg); }' +
 
-    /* Fold line (dashed di tengah) */
+    /* Fold line */
     '.fold-line { flex: 0 0 auto; border-top: 0.5pt dashed #6b3d1c; position: relative; height: 0; }' +
-    '.fold-line::after { content: "✂  lipat di sini  ✂"; position: absolute; top: -2mm; left: 50%; transform: translateX(-50%); background: #f5e6c4; padding: 0.4mm 2mm; font-size: 5.5pt; color: #8a5a2e; letter-spacing: 0.5pt; font-family: "Cinzel", serif; white-space: nowrap; border-radius: 1pt; }' +
+    '.fold-line::after { content: "✂ lipat ✂"; position: absolute; top: -1.8mm; left: 50%; transform: translateX(-50%); background: #f5e6c4; padding: 0.3mm 1.5mm; font-size: 5pt; color: #8a5a2e; letter-spacing: 0.5pt; font-family: "Cinzel", serif; white-space: nowrap; border-radius: 1pt; }' +
 
-    /* Typography */
-    '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 6pt; letter-spacing: 2.5pt; color: #6b3d1c; margin: 0 0 1mm; font-weight: 600; }' +
-    '.card-couple { font-family: "Pinyon Script", cursive; font-size: 18pt; color: #150a03; margin: 0; line-height: 1; }' +
-    '.card-date { font-family: "Cinzel", Georgia, serif; font-size: 6.5pt; letter-spacing: 1.5pt; color: #6b3d1c; margin: 1mm 0 1.5mm; }' +
-    '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 1mm; border-radius: 1pt; margin: 1mm 0; line-height: 0; }' +
-    '.card-qr-frame svg { display: block; width: 30mm; height: 30mm; }' +
-    '.card-guest { font-family: "Cormorant Garamond", Georgia, serif; font-size: 9pt; color: #150a03; margin: 1.5mm 0 0; font-style: italic; }' +
-    '.card-guest strong { font-weight: 700; font-style: normal; letter-spacing: 0.3pt; }' +
-    '.card-hint { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5.5pt; color: #8a5a2e; line-height: 1.3; margin: 1mm 0 0; font-style: italic; }' +
-    '.card-token { font-family: "Courier New", monospace; font-size: 7pt; color: #6b3d1c; margin: 1mm 0 0; letter-spacing: 1.5pt; font-weight: 700; }'
+    /* Typography (lebih compact untuk muat di 99mm height) */
+    '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 5.5pt; letter-spacing: 2pt; color: #6b3d1c; margin: 0; font-weight: 600; }' +
+    '.card-couple { font-family: "Pinyon Script", cursive; font-size: 13pt; color: #150a03; margin: 0; line-height: 1; }' +
+    '.card-date { font-family: "Cinzel", Georgia, serif; font-size: 5.5pt; letter-spacing: 1pt; color: #6b3d1c; margin: 0; }' +
+    '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 0.7mm; border-radius: 1pt; margin: 0.5mm 0; line-height: 0; }' +
+    '.card-qr-frame svg { display: block; width: 24mm; height: 24mm; }' +
+    '.card-guest { font-family: "Cormorant Garamond", Georgia, serif; font-size: 8pt; color: #150a03; margin: 0; font-style: italic; line-height: 1.1; }' +
+    '.card-guest strong { font-weight: 700; font-style: normal; letter-spacing: 0.2pt; }' +
+    '.card-hint { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5pt; color: #8a5a2e; line-height: 1.2; margin: 0; font-style: italic; }' +
+    '.card-token { font-family: "Courier New", monospace; font-size: 6.5pt; color: #6b3d1c; margin: 0; letter-spacing: 1pt; font-weight: 700; }'
   );
 }
 
