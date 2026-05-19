@@ -4584,6 +4584,7 @@ img[src$="loading.svg"] {
       <button class="add-btn" onclick="wablastAll()" style="flex:1;min-width:160px">Mulai WA Blast (semua No HP)</button>
       <button class="add-btn" onclick="showWaMenu()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#25D366,#128C7E)">Menu Kirim per Nama</button>
       <button class="add-btn" onclick="copyAllWALinks()" style="flex:1;min-width:160px;background:linear-gradient(135deg,var(--sogan),var(--sogan-dark))">Copy semua link WA</button>
+      <button class="add-btn" onclick="printAllPhysicalCards()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#6b3d1c,#3a200f)">🖨 Cetak Semua (A4 4-up)</button>
     </div>
     <p style="font-size:11px;color:var(--sogan);margin-bottom:8px;line-height:1.5">
       <strong>WA Blast mode SEQUENTIAL:</strong> klik "Mulai" — muncul tombol "Kirim ke [Nama]". Tiap klik buka 1 tab WhatsApp (1 user-gesture = aman dari popup blocker). Setelah klik Send di tab WA, balik ke sini, klik tombol "Kirim ke" berikutnya. Bisa lanjut puluhan/ratusan tamu tanpa ke-block.
@@ -6550,7 +6551,7 @@ function renderGuestLinks() {
           <span class="guest-link-url" onclick="copyLink('${safeLink}')" style="cursor:pointer" title="Klik untuk salin link">${link}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-          <button class="mini-btn" onclick="copyLink('${safeLink}')">Copy</button>
+          <button class="mini-btn" onclick="printPhysicalCard(${i})" title="Cetak undangan fisik (4 copy/A4)">🖨 Cetak</button>
           <button class="mini-btn" onclick="shareWA(${i})" style="${waBtnStyle}">${waLabel}</button>
           <button class="mini-btn" style="background:#a04040" onclick="deleteGuest(${i})">×</button>
         </div>
@@ -6802,6 +6803,197 @@ function hideQrisModal(event) {
       }
     }, 200);
   }
+}
+
+/* =========================================================
+   CETAK UNDANGAN FISIK — buka window print, layout A4 4-up
+   Tiap kartu = 1/4 A4 (105 x 148.5 mm), dilipat di tengah:
+     - Sisi atas: QR Undangan Digital (?to=Nama&sesi=...)
+     - Sisi bawah: QR Souvenir Scan (?mode=scan&t=token)
+     - Bagian bawah di-rotate 180° supaya setelah lipat fisik
+       jadi bagian belakang yang ter-baca normal saat di-flip.
+   ========================================================= */
+
+function generateQrSvgString(text, cellSize) {
+  if (typeof qrcode === 'undefined') return '';
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  return qr.createSvgTag({ cellSize: cellSize || 3, margin: 1, scalable: true });
+}
+
+function printPhysicalCard(idx) {
+  const g = getGuestList()[idx];
+  if (!g) {
+    showToast('Tamu tidak ditemukan', 'error');
+    return;
+  }
+  // 4 copy tamu yang sama supaya 1 A4 = 4 kartu (ada cadangan)
+  openPrintWindow([g, g, g, g]);
+}
+
+function printAllPhysicalCards() {
+  const guests = getGuestList();
+  if (guests.length === 0) {
+    showToast('Belum ada tamu untuk dicetak', 'error');
+    return;
+  }
+  openPrintWindow(guests);
+}
+
+function openPrintWindow(guests) {
+  if (typeof qrcode === 'undefined') {
+    showToast('QR library belum ter-load. Refresh halaman & coba lagi.', 'error');
+    return;
+  }
+  const w = window.open('', '_blank', 'width=900,height=720');
+  if (!w) {
+    showToast('Popup diblokir. Izinkan popup untuk site ini.', 'error');
+    return;
+  }
+
+  const baseUrl = location.origin + location.pathname;
+  const assetBase = new URL('assets/', location.href).toString();
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+  const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || 'AHAD, 21 JUNI 2026';
+
+  const cards = guests.map(g => {
+    const token = tokenForGuest(g.name);
+    const digitalUrl = baseUrl + '?to=' + encodeURIComponent(g.name) + '&sesi=' + encodeURIComponent(g.session || 'Sesi 2');
+    const souvenirUrl = baseUrl + '?mode=scan&t=' + token + '&n=' + encodeURIComponent(g.name);
+    return {
+      name: g.name,
+      session: g.session || '',
+      token,
+      digitalQr: generateQrSvgString(digitalUrl, 3),
+      souvenirQr: generateQrSvgString(souvenirUrl, 3)
+    };
+  });
+
+  // Group 4 cards per A4 page (2x2 grid)
+  const pages = [];
+  for (let i = 0; i < cards.length; i += 4) pages.push(cards.slice(i, i + 4));
+
+  const pagesHtml = pages.map(pg => {
+    const cardsHtml = pg.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
+    const padCount = 4 - pg.length;
+    const padHtml = padCount > 0
+      ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
+      : '';
+    return '<div class="a4-page">' + cardsHtml + padHtml + '</div>';
+  }).join('');
+
+  const html = '<!DOCTYPE html>\n<html lang="id">\n<head>\n' +
+    '<meta charset="utf-8">\n' +
+    '<title>Cetak Undangan Fisik &mdash; ' + cards.length + ' kartu</title>\n' +
+    '<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Pinyon+Script&display=swap" rel="stylesheet">\n' +
+    '<style>' + buildPrintCss(assetBase) + '</style>\n' +
+    '</head>\n<body>\n' +
+    '<div class="print-toolbar">' +
+      '<strong>' + cards.length + ' kartu undangan fisik</strong>' +
+      '<span style="opacity:.7">&nbsp;·&nbsp; A4, 4 kartu per halaman &nbsp;·&nbsp; lipat di garis putus-putus</span>' +
+      '<span style="flex:1"></span>' +
+      '<button onclick="window.print()" class="print-btn-action">🖨 Cetak / Save PDF</button>' +
+      '<button onclick="window.close()">Tutup</button>' +
+    '</div>\n' +
+    '<div class="pages-wrap">\n' + pagesHtml + '\n</div>\n' +
+    '</body>\n</html>';
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+
+  showToast('✓ ' + cards.length + ' kartu siap cetak. Klik tombol "Cetak" di window baru.', 'success');
+}
+
+function buildPrintCardHtml(c, coupleNames, eventDate) {
+  const escName = escapeHtml(c.name);
+  const escCouple = escapeHtml(coupleNames);
+  const escDate = escapeHtml(eventDate);
+  const escToken = escapeHtml(c.token);
+  return '<div class="physical-card">' +
+    '<span class="card-corner corner-tl"></span>' +
+    '<span class="card-corner corner-tr"></span>' +
+    '<span class="card-corner corner-bl"></span>' +
+    '<span class="card-corner corner-br"></span>' +
+    '<div class="card-half card-top">' +
+      '<p class="card-tagline">UNDANGAN DIGITAL</p>' +
+      '<p class="card-couple">' + escCouple + '</p>' +
+      '<p class="card-date">' + escDate + '</p>' +
+      '<div class="card-qr-frame">' + c.digitalQr + '</div>' +
+      '<p class="card-guest">Yth. <strong>' + escName + '</strong></p>' +
+      '<p class="card-hint">Scan untuk buka undangan digital</p>' +
+    '</div>' +
+    '<div class="fold-line"></div>' +
+    '<div class="card-half card-bottom">' +
+      '<p class="card-tagline">E-TIKET SOUVENIR</p>' +
+      '<p class="card-couple">' + escCouple + '</p>' +
+      '<div class="card-qr-frame">' + c.souvenirQr + '</div>' +
+      '<p class="card-token">' + escToken + '</p>' +
+      '<p class="card-hint">Tunjukkan QR ke penerima tamu saat tiba</p>' +
+    '</div>' +
+  '</div>';
+}
+
+function buildPrintCss(assetBase) {
+  return (
+    '@page { size: A4 portrait; margin: 0; }' +
+    '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }' +
+    'html, body { margin: 0; padding: 0; font-family: "Cormorant Garamond", Georgia, serif; color: #150a03; }' +
+
+    /* Screen preview (sebelum print) */
+    '@media screen {' +
+      'body { background: #3a2a1a; padding: 60px 16px 24px; }' +
+      '.a4-page { box-shadow: 0 6px 30px rgba(0,0,0,0.6); margin: 0 auto 24px; background: #fff; }' +
+    '}' +
+    /* Print mode */
+    '@media print {' +
+      '.print-toolbar { display: none !important; }' +
+      'body { background: #fff; padding: 0; }' +
+    '}' +
+
+    /* Toolbar (preview screen) */
+    '.print-toolbar { position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(180deg, #1a0f06, #0a0502); color: #e8d4a8; padding: 12px 16px; font-family: Georgia, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 8px; z-index: 1000; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }' +
+    '.print-toolbar button { padding: 8px 14px; background: #c9a25a; color: #150a03; border: 1px solid #b88c47; border-radius: 4px; font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 1.5px; font-weight: 600; cursor: pointer; }' +
+    '.print-toolbar .print-btn-action { background: #d4af64; }' +
+
+    /* A4 page: 2x2 grid of 4 cards */
+    '.a4-page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; page-break-after: always; background: #fff; }' +
+    '.a4-page:last-child { page-break-after: auto; }' +
+
+    /* Individual card (1/4 A4 = 105 x 148.5 mm) */
+    '.physical-card { width: 105mm; height: 148.5mm; padding: 5mm 4mm; display: flex; flex-direction: column; position: relative; background: linear-gradient(180deg, #faf0d8, #e8d4a8); border: 0.5pt solid #c9a25a; overflow: hidden; }' +
+    '.physical-card-empty { background: transparent; border: 0.5pt dashed #c9a25a; }' +
+    '.physical-card-empty * { display: none; }' +
+    '.physical-card::before { content: ""; position: absolute; inset: 0; background-image: url("' + assetBase + 'batik-tile.png"); background-size: 80px; opacity: 0.07; mix-blend-mode: multiply; pointer-events: none; }' +
+
+    /* Corner ornaments */
+    '.card-corner { position: absolute; width: 12mm; height: 12mm; background: url("' + assetBase + 'corner-02.webp") center/contain no-repeat; opacity: 0.6; z-index: 1; }' +
+    '.corner-tl { top: 2mm; left: 2mm; }' +
+    '.corner-tr { top: 2mm; right: 2mm; transform: scaleX(-1); }' +
+    '.corner-bl { bottom: 2mm; left: 2mm; transform: scaleY(-1); }' +
+    '.corner-br { bottom: 2mm; right: 2mm; transform: scale(-1, -1); }' +
+
+    /* Card halves: top + bottom side dipisah fold line */
+    '.card-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 2; padding: 1mm 2mm; min-height: 0; }' +
+    '.card-bottom { transform: rotate(180deg); }' +
+
+    /* Fold line (dashed di tengah) */
+    '.fold-line { flex: 0 0 auto; border-top: 0.5pt dashed #6b3d1c; position: relative; height: 0; }' +
+    '.fold-line::after { content: "✂  lipat di sini  ✂"; position: absolute; top: -2mm; left: 50%; transform: translateX(-50%); background: #f5e6c4; padding: 0.4mm 2mm; font-size: 5.5pt; color: #8a5a2e; letter-spacing: 0.5pt; font-family: "Cinzel", serif; white-space: nowrap; border-radius: 1pt; }' +
+
+    /* Typography */
+    '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 6pt; letter-spacing: 2.5pt; color: #6b3d1c; margin: 0 0 1mm; font-weight: 600; }' +
+    '.card-couple { font-family: "Pinyon Script", cursive; font-size: 18pt; color: #150a03; margin: 0; line-height: 1; }' +
+    '.card-date { font-family: "Cinzel", Georgia, serif; font-size: 6.5pt; letter-spacing: 1.5pt; color: #6b3d1c; margin: 1mm 0 1.5mm; }' +
+    '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 1mm; border-radius: 1pt; margin: 1mm 0; line-height: 0; }' +
+    '.card-qr-frame svg { display: block; width: 30mm; height: 30mm; }' +
+    '.card-guest { font-family: "Cormorant Garamond", Georgia, serif; font-size: 9pt; color: #150a03; margin: 1.5mm 0 0; font-style: italic; }' +
+    '.card-guest strong { font-weight: 700; font-style: normal; letter-spacing: 0.3pt; }' +
+    '.card-hint { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5.5pt; color: #8a5a2e; line-height: 1.3; margin: 1mm 0 0; font-style: italic; }' +
+    '.card-token { font-family: "Courier New", monospace; font-size: 7pt; color: #6b3d1c; margin: 1mm 0 0; letter-spacing: 1.5pt; font-weight: 700; }'
+  );
 }
 
 /* =========================================================
