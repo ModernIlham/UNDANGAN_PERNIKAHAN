@@ -6922,6 +6922,13 @@ function buildPrintCardHtml(c, coupleNames, eventDate) {
   const escCouple = escapeHtml(coupleNames);
   const escDate = escapeHtml(eventDate);
   const escToken = escapeHtml(c.token);
+  // Auto-shrink font kalau nama panjang (banyak gelar). Threshold:
+  //   <= 22 char: normal 8pt
+  //   23-32 char: long-name 6.5pt
+  //   > 32 char: very-long-name 6pt
+  const nameLen = (c.name || '').length;
+  const guestClass = nameLen > 32 ? ' very-long-name'
+    : (nameLen > 22 ? ' long-name' : '');
   return '<div class="physical-card">' +
     '<span class="card-corner corner-tl"></span>' +
     '<span class="card-corner corner-tr"></span>' +
@@ -6932,7 +6939,7 @@ function buildPrintCardHtml(c, coupleNames, eventDate) {
       '<p class="card-couple">' + escCouple + '</p>' +
       '<p class="card-date">' + escDate + '</p>' +
       '<div class="card-qr-frame">' + c.digitalQr + '</div>' +
-      '<p class="card-guest">Yth. <strong>' + escName + '</strong></p>' +
+      '<p class="card-guest' + guestClass + '">Yth. <strong>' + escName + '</strong></p>' +
       '<p class="card-hint">Scan untuk buka undangan digital</p>' +
     '</div>' +
     '<div class="fold-line"></div>' +
@@ -6947,10 +6954,10 @@ function buildPrintCardHtml(c, coupleNames, eventDate) {
 }
 
 function buildPrintCss(assetBase, mode) {
-  // Bulk: A4 portrait, grid 2 kolom × 3 baris → 6 kartu per halaman, tiap kartu 105×99mm
-  // Single: 1 kartu per halaman, page size = 105×99mm (sama dengan 1 bagian bulk)
+  // Bulk: A4 portrait, grid 3 kolom × 2 baris → 6 kartu per halaman, tiap kartu 70×148.5mm
+  // Single: 1 kartu per halaman, page size = 70×148.5mm (sama dengan 1 bagian bulk)
   const isBulk = mode !== 'single';
-  const pageSize = isBulk ? 'A4 portrait' : '105mm 99mm';
+  const pageSize = isBulk ? 'A4 portrait' : '70mm 148.5mm';
 
   return (
     '@page { size: ' + pageSize + '; margin: 0; }' +
@@ -6960,13 +6967,13 @@ function buildPrintCss(assetBase, mode) {
     /* Screen preview */
     '@media screen {' +
       'body { background: #3a2a1a; padding: 60px 16px 24px; }' +
-      '.a4-page, .physical-card.single-page { box-shadow: 0 6px 30px rgba(0,0,0,0.6); margin: 0 auto 24px; background: #fff; }' +
+      '.a4-page, .pages-wrap > .physical-card { box-shadow: 0 6px 30px rgba(0,0,0,0.6); margin: 0 auto 24px; background: #fff; }' +
     '}' +
     /* Print */
     '@media print {' +
       '.print-toolbar { display: none !important; }' +
       'body { background: #fff; padding: 0; }' +
-      (isBulk ? '' : '.physical-card { page-break-after: always; } .physical-card:last-child { page-break-after: auto; }') +
+      (isBulk ? '' : '.pages-wrap > .physical-card { page-break-after: always; } .pages-wrap > .physical-card:last-child { page-break-after: auto; }') +
     '}' +
 
     /* Toolbar (preview) */
@@ -6974,17 +6981,17 @@ function buildPrintCss(assetBase, mode) {
     '.print-toolbar button { padding: 8px 14px; background: #c9a25a; color: #150a03; border: 1px solid #b88c47; border-radius: 4px; font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 1.5px; font-weight: 600; cursor: pointer; }' +
     '.print-toolbar .print-btn-action { background: #d4af64; }' +
 
-    /* A4 page (bulk): 2 kolom × 3 baris = 6 kartu */
-    '.a4-page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; page-break-after: always; background: #fff; }' +
+    /* A4 page (bulk): 3 kolom × 2 baris = 6 kartu */
+    '.a4-page { width: 210mm; height: 297mm; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; page-break-after: always; background: #fff; }' +
     '.a4-page:last-child { page-break-after: auto; }' +
 
-    /* Individual card (1/6 A4 = 105 × 99 mm) */
-    '.physical-card { width: 105mm; height: 99mm; padding: 3.5mm 3mm; display: flex; flex-direction: column; position: relative; background: linear-gradient(180deg, #faf0d8, #e8d4a8); border: 0.5pt solid #c9a25a; overflow: hidden; }' +
+    /* Individual card (1/6 A4 = 70 × 148.5 mm) */
+    '.physical-card { width: 70mm; height: 148.5mm; padding: 4mm 3mm; display: flex; flex-direction: column; position: relative; background: linear-gradient(180deg, #faf0d8, #e8d4a8); border: 0.5pt solid #c9a25a; overflow: hidden; }' +
     '.physical-card-empty { background: transparent; border: 0.5pt dashed #c9a25a; }' +
     '.physical-card-empty * { display: none; }' +
     '.physical-card::before { content: ""; position: absolute; inset: 0; background-image: url("' + assetBase + 'batik-tile.png"); background-size: 70px; opacity: 0.06; mix-blend-mode: multiply; pointer-events: none; }' +
 
-    /* Corner ornaments — lebih kecil supaya muat di kartu 99mm */
+    /* Corner ornaments — kecil tapi pas */
     '.card-corner { position: absolute; width: 9mm; height: 9mm; background: url("' + assetBase + 'corner-02.webp") center/contain no-repeat; opacity: 0.55; z-index: 1; }' +
     '.corner-tl { top: 1.5mm; left: 1.5mm; }' +
     '.corner-tr { top: 1.5mm; right: 1.5mm; transform: scaleX(-1); }' +
@@ -6992,23 +6999,28 @@ function buildPrintCss(assetBase, mode) {
     '.corner-br { bottom: 1.5mm; right: 1.5mm; transform: scale(-1, -1); }' +
 
     /* Card halves: top + bottom side dipisah fold line */
-    '.card-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 2; padding: 0.5mm 1mm; min-height: 0; gap: 0.3mm; }' +
+    '.card-half { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 2; padding: 1mm 1.5mm; min-height: 0; gap: 0.5mm; }' +
     '.card-bottom { transform: rotate(180deg); }' +
 
     /* Fold line */
     '.fold-line { flex: 0 0 auto; border-top: 0.5pt dashed #6b3d1c; position: relative; height: 0; }' +
     '.fold-line::after { content: "✂ lipat ✂"; position: absolute; top: -1.8mm; left: 50%; transform: translateX(-50%); background: #f5e6c4; padding: 0.3mm 1.5mm; font-size: 5pt; color: #8a5a2e; letter-spacing: 0.5pt; font-family: "Cinzel", serif; white-space: nowrap; border-radius: 1pt; }' +
 
-    /* Typography (lebih compact untuk muat di 99mm height) */
-    '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 5.5pt; letter-spacing: 2pt; color: #6b3d1c; margin: 0; font-weight: 600; }' +
-    '.card-couple { font-family: "Pinyon Script", cursive; font-size: 13pt; color: #150a03; margin: 0; line-height: 1; }' +
+    /* Typography (untuk kartu 70mm wide × 148.5mm tall) */
+    '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 5.5pt; letter-spacing: 1.8pt; color: #6b3d1c; margin: 0; font-weight: 600; }' +
+    '.card-couple { font-family: "Pinyon Script", cursive; font-size: 14pt; color: #150a03; margin: 0; line-height: 1; max-width: 100%; word-break: break-word; }' +
     '.card-date { font-family: "Cinzel", Georgia, serif; font-size: 5.5pt; letter-spacing: 1pt; color: #6b3d1c; margin: 0; }' +
-    '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 0.7mm; border-radius: 1pt; margin: 0.5mm 0; line-height: 0; }' +
-    '.card-qr-frame svg { display: block; width: 24mm; height: 24mm; }' +
-    '.card-guest { font-family: "Cormorant Garamond", Georgia, serif; font-size: 8pt; color: #150a03; margin: 0; font-style: italic; line-height: 1.1; }' +
+    '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 0.8mm; border-radius: 1pt; margin: 1mm 0; line-height: 0; }' +
+    '.card-qr-frame svg { display: block; width: 28mm; height: 28mm; }' +
+    /* Guest name — handle nama panjang dengan gelar.
+       max-width supaya wrap, line-clamp 3 baris max, font auto-shrink via length detection via JS opsional.
+       Word-break supaya gelar "S.Tr.,M.Si." dipotong di antar-koma kalau perlu. */
+    '.card-guest { font-family: "Cormorant Garamond", Georgia, serif; font-size: 8pt; color: #150a03; margin: 0; font-style: italic; line-height: 1.2; max-width: 100%; padding: 0 1mm; word-break: break-word; overflow-wrap: break-word; hyphens: auto; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }' +
+    '.card-guest.long-name { font-size: 6.5pt; -webkit-line-clamp: 4; }' +
+    '.card-guest.very-long-name { font-size: 6pt; -webkit-line-clamp: 4; }' +
     '.card-guest strong { font-weight: 700; font-style: normal; letter-spacing: 0.2pt; }' +
     '.card-hint { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5pt; color: #8a5a2e; line-height: 1.2; margin: 0; font-style: italic; }' +
-    '.card-token { font-family: "Courier New", monospace; font-size: 6.5pt; color: #6b3d1c; margin: 0; letter-spacing: 1pt; font-weight: 700; }'
+    '.card-token { font-family: "Courier New", monospace; font-size: 6.5pt; color: #6b3d1c; margin: 0; letter-spacing: 1pt; font-weight: 700; word-break: break-all; }'
   );
 }
 
