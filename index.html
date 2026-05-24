@@ -2029,6 +2029,230 @@ body.scanner-mode > #scanner-page {
   border: 1px solid #c47864;
   color: #fbe7e7;
 }
+/* Receiver-by bar di scanner page (akuntabilitas siapa penerima tamu yang scan) */
+.scanner-receiver-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(212, 175, 100, 0.12);
+  border: 1px solid rgba(212, 175, 100, 0.4);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--emas-terang);
+}
+.scanner-receiver-bar .label { opacity: 0.8; font-size: 11px; }
+.scanner-receiver-bar .value { font-weight: 600; flex: 1; color: #fff; word-break: break-word; }
+.scanner-receiver-bar button {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(212, 175, 100, 0.6);
+  color: var(--emas-terang);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.scanner-receiver-bar button:hover { background: rgba(255,255,255,0.2); }
+
+/* GROUP MODE PANEL — muncul saat scan QR rombongan */
+.scanner-group-panel {
+  background: linear-gradient(180deg, #fff7e6, #fdebc9);
+  color: #3a200f;
+  border: 2px solid #b88746;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: left;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.scanner-group-panel h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: #3a200f;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+.scanner-group-panel .group-sub {
+  font-size: 11px;
+  color: #6b3d1c;
+  margin-bottom: 12px;
+  font-family: 'Courier New', monospace;
+}
+.scanner-group-counter {
+  display: flex; gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.scanner-group-counter .stat {
+  flex: 1 1 80px;
+  background: #fff;
+  border: 1px solid #d2a857;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.scanner-group-counter .stat .num {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #3a200f;
+  line-height: 1;
+}
+.scanner-group-counter .stat .lbl {
+  font-size: 9.5px;
+  color: #6b3d1c;
+  letter-spacing: 1.2px;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.scanner-group-counter .stat.is-full .num { color: #7a3325; }
+.scanner-group-counter .stat.is-warning .num { color: #b87f17; }
+
+.scanner-attended-summary {
+  max-height: 100px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px dashed #d2a857;
+  border-radius: 5px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #4a2810;
+}
+.scanner-attended-summary strong { color: #3a200f; }
+.scanner-attended-summary .pill {
+  display: inline-block;
+  background: #f3e6c8;
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 10px;
+  margin: 2px 2px 2px 0;
+  white-space: nowrap;
+}
+.scanner-attended-summary .pill.is-titipan {
+  background: #fff3cd;
+  border: 1px solid #d2a857;
+}
+
+.scanner-group-form { display: flex; flex-direction: column; gap: 8px; }
+.scanner-group-form input,
+.scanner-group-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #b88746;
+  border-radius: 5px;
+  background: #fff;
+  color: #3a200f;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.scanner-group-form input:focus,
+.scanner-group-form select:focus {
+  outline: none;
+  border-color: #6b3d1c;
+  box-shadow: 0 0 0 2px rgba(184, 135, 70, 0.25);
+}
+.scanner-titipan-block {
+  background: #fff8e1;
+  border: 1px dashed #d2a857;
+  border-radius: 5px;
+  padding: 10px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+}
+.scanner-titipan-block.show { display: flex; }
+.scanner-titipan-block .titipan-label {
+  font-size: 11px;
+  color: #856404;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.scanner-titipan-toggle {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(212, 175, 100, 0.15);
+  border: 1px solid #d2a857;
+  border-radius: 5px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: #5a3a0a;
+  font-weight: 500;
+}
+.scanner-titipan-toggle input { width: 18px; height: 18px; cursor: pointer; }
+.scanner-titipan-toggle.is-disabled {
+  opacity: 0.5; pointer-events: none;
+  background: #f0f0f0; border-color: #ccc; color: #888;
+}
+
+.scanner-group-actions {
+  display: flex; gap: 8px; margin-top: 6px;
+}
+.scanner-group-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.scanner-group-actions .btn-confirm {
+  background: linear-gradient(135deg, #6db86d, #2d6a32);
+  color: #fff;
+}
+.scanner-group-actions .btn-confirm:hover { filter: brightness(1.1); }
+.scanner-group-actions .btn-cancel {
+  background: #888;
+  color: #fff;
+  flex: 0 0 100px;
+}
+.scanner-group-actions button:disabled { opacity: 0.5; cursor: wait; }
+
+/* Override confirmation banner (untuk needConfirm warnings) */
+.scanner-confirm-banner {
+  background: #fff3cd;
+  border: 2px solid #d2a857;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: #856404;
+}
+.scanner-confirm-banner strong { color: #5a3a0a; }
+.scanner-confirm-banner .actions {
+  display: flex; gap: 8px; margin-top: 10px;
+}
+.scanner-confirm-banner .actions button {
+  flex: 1; padding: 8px;
+  border: none; border-radius: 4px;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 1px; cursor: pointer; font-weight: 600;
+}
+.scanner-confirm-banner .actions .yes { background: #b87f17; color: #fff; }
+.scanner-confirm-banner .actions .no  { background: #888; color: #fff; }
+
+.scanner-hardblock-banner {
+  background: #5a2727;
+  border: 2px solid #c47864;
+  color: #fbe7e7;
+  border-radius: 6px;
+  padding: 14px;
+  margin: 10px 0;
+  font-size: 13px;
+  text-align: center;
+}
+.scanner-hardblock-banner .icon { font-size: 36px; line-height: 1; margin-bottom: 6px; }
+
 .scan-reset-btn {
   width: 100%;
   padding: 12px;
@@ -2270,6 +2494,233 @@ body.scanner-mode > #scanner-page {
   padding: 1.25rem;
   margin-bottom: 1rem;
   color: var(--sogan-darkest);
+}
+
+/* ===== GROUP / ROMBONGAN MANAGEMENT (admin panel) ===== */
+.group-form { display:flex; flex-direction:column; gap:8px; }
+.group-form-row { display:flex; gap:6px; flex-wrap:wrap; }
+.group-form-row > .admin-input,
+.group-form-row > .admin-select { flex:1 1 160px; min-width:0; }
+.group-form-row > .add-btn { flex:1 1 200px; }
+.group-toggles {
+  background:#fff8e1; border:1px dashed #d2a857;
+  border-radius:6px; padding:8px 10px;
+  align-items:center; gap:14px;
+}
+.group-toggle-label {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12px; color:#4a2810; cursor:pointer; font-weight:500;
+}
+.group-toggle-label input[type="checkbox"] { width:16px; height:16px; cursor:pointer; }
+.group-toggle-label select {
+  padding:3px 6px; border:1px solid #b88746; border-radius:4px;
+  background:#fff; font-size:12px; font-family:inherit;
+}
+.group-item {
+  background:#fff; border:1px solid #d2a857; border-left:4px solid #b88746;
+  border-radius:6px; padding:10px 12px; margin-bottom:8px;
+  display:flex; flex-direction:column; gap:8px;
+  box-shadow:0 1px 3px rgba(107, 61, 28, 0.08);
+}
+.group-item-head {
+  display:flex; justify-content:space-between; align-items:flex-start; gap:8px;
+}
+.group-item-name {
+  font-family:'Cinzel', serif; font-size:13px; color:#3a200f;
+  letter-spacing:1.2px; text-transform:uppercase;
+}
+.group-item-id {
+  font-size:10px; color:#888; font-family:'Courier New', monospace;
+  display:block; margin-top:2px;
+}
+.group-item-meta {
+  font-size:11px; color:#6b3d1c; line-height:1.5;
+}
+.group-item-meta strong { color:#3a200f; }
+.group-progress-bar {
+  height:8px; background:#f3e6c8; border-radius:4px;
+  overflow:hidden; margin:4px 0; position:relative;
+}
+.group-progress-fill {
+  height:100%; background:linear-gradient(90deg, #6db86d, #3a8a3a);
+  transition:width 0.4s ease; border-radius:4px;
+}
+.group-progress-fill.is-warning { background:linear-gradient(90deg, #d2a857, #b87f17); }
+.group-progress-fill.is-full    { background:linear-gradient(90deg, #c47864, #7a3325); }
+.group-item-actions {
+  display:flex; gap:5px; flex-wrap:wrap; margin-top:4px;
+}
+.group-item-actions .mini-btn { flex:1 1 auto; min-width:90px; font-size:10.5px; padding:5px 8px; }
+.group-titipan-badge {
+  display:inline-block; font-size:9px; padding:2px 7px;
+  border-radius:10px; font-weight:700; letter-spacing:0.8px;
+  vertical-align:middle; margin-left:6px;
+}
+.group-titipan-badge.is-on  { background:#fff3cd; color:#856404; border:1px solid #d2a857; }
+.group-titipan-badge.is-off { background:#f8d7da; color:#721c24; border:1px solid #c47864; }
+
+/* ===== AUDIT KEHADIRAN LENGKAP (admin panel) ===== */
+.audit-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.audit-stat-card {
+  background: #fff;
+  border: 1px solid #b88746;
+  border-radius: 6px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(58, 32, 15, 0.08);
+}
+.audit-stat-card .num {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #3a200f;
+  line-height: 1;
+}
+.audit-stat-card .lbl {
+  font-size: 9px;
+  color: #6b3d1c;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.audit-stat-card.audit-stat-titipan  { background: #fff8e1; border-color: #d2a857; }
+.audit-stat-card.audit-stat-titipan .num { color: #856404; }
+.audit-stat-card.audit-stat-override { background: #fbe7e7; border-color: #c47864; }
+.audit-stat-card.audit-stat-override .num { color: #7a3325; }
+.audit-stat-card.audit-stat-total { background: #d4edda; border-color: #2d6a32; }
+.audit-stat-card.audit-stat-total .num { color: #155724; }
+
+.audit-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(184, 135, 70, 0.08);
+  border-radius: 6px;
+}
+.audit-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #4a2810;
+  cursor: pointer;
+  padding: 4px 8px;
+  background: #fff;
+  border: 1px solid #b88746;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.audit-filter-toggle input { width: 14px; height: 14px; cursor: pointer; }
+
+.audit-result-meta {
+  font-size: 11px;
+  color: #6b3d1c;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.audit-list-container {
+  background: #fff;
+  border: 1px solid #d2a857;
+  border-radius: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.audit-list-container::-webkit-scrollbar { width: 6px; }
+.audit-list-container::-webkit-scrollbar-thumb { background: #d2a857; border-radius: 3px; }
+
+.audit-row {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3e6c8;
+  font-size: 12px;
+  color: #3a200f;
+  line-height: 1.5;
+}
+.audit-row:last-child { border-bottom: none; }
+.audit-row .row-name {
+  font-weight: 600;
+  color: #3a200f;
+  display: inline;
+}
+.audit-row .row-badge {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.audit-row .row-badge.is-personal { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.audit-row .row-badge.is-hadir    { background: #d4edda; color: #155724; border: 1px solid #6db86d; }
+.audit-row .row-badge.is-titipan  { background: #fff3cd; color: #856404; border: 1px solid #d2a857; }
+.audit-row .row-badge.is-override { background: #fbe7e7; color: #7a3325; border: 1px solid #c47864; }
+.audit-row .row-meta {
+  display: block;
+  font-size: 10.5px;
+  color: #888;
+  margin-top: 2px;
+}
+.audit-row .row-meta strong { color: #6b3d1c; }
+.audit-row.is-override-row {
+  background: linear-gradient(90deg, rgba(196, 120, 100, 0.08), transparent 60%);
+}
+
+.audit-load-sentinel {
+  text-align: center;
+  padding: 10px;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: #888;
+  background: rgba(184, 135, 70, 0.05);
+  border-top: 1px dashed #d2a857;
+  text-transform: uppercase;
+}
+
+/* Modal: detail attendance per group */
+.group-detail-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:5500;
+  display:none; align-items:center; justify-content:center; padding:16px;
+}
+.group-detail-overlay.show { display:flex; }
+.group-detail-card {
+  background:#fff; border-radius:10px; max-width:480px; width:100%;
+  max-height:80vh; overflow-y:auto; padding:18px;
+  border:2px solid #b88746; box-shadow:0 8px 30px rgba(0,0,0,0.4);
+}
+.group-detail-card h4 {
+  font-family:'Cinzel', serif; font-size:14px; color:#3a200f;
+  letter-spacing:1.5px; margin:0 0 10px; text-transform:uppercase;
+}
+.group-detail-card .close-x {
+  float:right; background:none; border:none; font-size:22px;
+  cursor:pointer; color:#6b3d1c; line-height:1; padding:0;
+}
+.group-attended-row {
+  padding:8px 10px; border-bottom:1px solid #f3e6c8;
+  font-size:12px; color:#3a200f;
+}
+.group-attended-row:last-child { border-bottom:none; }
+.group-attended-row .type-badge {
+  display:inline-block; font-size:9px; font-weight:700;
+  padding:2px 7px; border-radius:10px; margin-left:6px; vertical-align:middle;
+}
+.group-attended-row .type-badge.is-hadir   { background:#d4edda; color:#155724; }
+.group-attended-row .type-badge.is-titipan { background:#fff3cd; color:#856404; }
+.group-attended-row .row-meta {
+  display:block; font-size:10px; color:#888; margin-top:2px;
 }
 #admin-panel h3 {
   font-family: 'Cinzel', serif;
@@ -4595,6 +5046,134 @@ img[src$="loading.svg"] {
     </div>
   </div>
 
+  <!-- ROMBONGAN / GROUP QR -->
+  <div class="admin-section" style="border:2px solid #b88746;background:linear-gradient(180deg,#fff7e6,#fdebc9)">
+    <h3 style="color:#6b3d1c">👥 MANAJEMEN ROMBONGAN (Group QR)</h3>
+    <p style="font-size:12px;color:#4a2810;margin-bottom:8px;line-height:1.5">
+      <strong>Use case:</strong> 1 QR untuk banyak orang (rekan kerja, alumni, keluarga jauh).
+      Saat scan, penerima tamu input nama per orang yang datang.
+      Bisa atur per-group apakah <strong>boleh titipan</strong> atau hanya yang hadir.
+    </p>
+    <p style="font-size:11px;color:#7a3d00;margin-bottom:10px;background:#fff8e1;padding:6px 8px;border-radius:4px;border-left:3px solid #d2a857">
+      ⚠️ Pastikan Apps Script sudah di-redeploy dengan kode terbaru (ada endpoint <code>registerGroup</code>, <code>getGroupInfo</code>, <code>redeemGroupSlot</code>) sebelum pakai fitur ini.
+    </p>
+
+    <!-- FORM ADD/EDIT GROUP -->
+    <div class="group-form">
+      <div class="group-form-row">
+        <input class="admin-input" id="grp-name" placeholder="Nama rombongan (ex: Rekan Kerja Kantor)" oninput="autoSuggestGroupId()">
+        <input class="admin-input" id="grp-id" placeholder="ID slug (auto-isi, ex: rekan_kerja_kantor)">
+      </div>
+      <div class="group-form-row">
+        <select class="admin-select" id="grp-session">
+          <option value="Akad">Akad Nikah (16:00 - 17:00)</option>
+          <option value="Sesi 1" selected>Sesi 1 - Tamu Undangan (18:30)</option>
+          <option value="Sesi 2">Sesi 2 - Tamu Undangan (20:00)</option>
+          <option value="Akad + Resepsi">Akad + Resepsi (full)</option>
+        </select>
+        <input class="admin-input" id="grp-quota" type="number" min="1" max="500" value="15" placeholder="Kuota tamu (orang)">
+      </div>
+      <div class="group-form-row group-toggles">
+        <label class="group-toggle-label">
+          <input type="checkbox" id="grp-allow-titipan" onchange="toggleTitipanFields()">
+          <span>Izinkan titipan</span>
+        </label>
+        <label class="group-toggle-label" id="grp-max-titipan-wrap" style="display:none">
+          Max titipan/scan:
+          <select id="grp-max-titipan">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+        <label class="group-toggle-label">
+          <input type="checkbox" id="grp-warn-double" checked>
+          <span>Warning jika nama duplikat</span>
+        </label>
+      </div>
+      <textarea class="admin-input" id="grp-notes" rows="2" placeholder="Catatan internal (opsional, ex: jangan sampai melebihi kuota)" style="resize:vertical;font-family:inherit"></textarea>
+      <div class="group-form-row">
+        <button class="add-btn" onclick="saveGroup()" id="grp-save-btn">+ TAMBAH ROMBONGAN</button>
+        <button class="mini-btn" onclick="resetGroupForm()" style="background:#888;color:#fff">Reset Form</button>
+      </div>
+    </div>
+
+    <!-- LIST EXISTING GROUPS -->
+    <div style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <strong style="font-size:12px;color:#6b3d1c">DAFTAR ROMBONGAN</strong>
+        <button class="mini-btn" onclick="refreshGroupsList()" style="background:#b88746;color:#fff">⟳ Refresh</button>
+      </div>
+      <div id="admin-groups-list" style="min-height:40px">
+        <p style="font-size:11px;color:#888;padding:8px">Memuat daftar rombongan…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAPORAN & AUDIT KEHADIRAN LENGKAP -->
+  <div class="admin-section" style="border:2px solid #3a200f;background:linear-gradient(180deg,#fdf6e3,#f8ecd0)">
+    <h3 style="color:#3a200f">📊 LAPORAN KEHADIRAN LENGKAP (AUDIT)</h3>
+    <p style="font-size:12px;color:#4a2810;margin-bottom:10px;line-height:1.5">
+      Semua data scan (personal & rombongan) tercatat di sheet <strong>Attendance</strong>.
+      Section ini menampilkan ringkasan + filter audit + export CSV lengkap.
+    </p>
+
+    <!-- OVERALL STATS CARDS -->
+    <div class="audit-stats-grid" id="audit-stats-grid">
+      <div class="audit-stat-card">
+        <div class="num" id="audit-stat-personal">0</div>
+        <div class="lbl">QR PERSONAL<br>TER-REDEEM</div>
+      </div>
+      <div class="audit-stat-card">
+        <div class="num" id="audit-stat-group-hadir">0</div>
+        <div class="lbl">GROUP HADIR<br>SENDIRI</div>
+      </div>
+      <div class="audit-stat-card audit-stat-titipan">
+        <div class="num" id="audit-stat-titipan">0</div>
+        <div class="lbl">TITIPAN<br>TERCATAT</div>
+      </div>
+      <div class="audit-stat-card audit-stat-override">
+        <div class="num" id="audit-stat-override">0</div>
+        <div class="lbl">OVERRIDE<br>EVENT</div>
+      </div>
+      <div class="audit-stat-card audit-stat-total">
+        <div class="num" id="audit-stat-total">0</div>
+        <div class="lbl">TOTAL<br>SOUVENIR KELUAR</div>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="audit-filter-bar">
+      <input type="search" class="admin-input" id="audit-search" placeholder="🔍 Cari nama tamu / titipan..." oninput="renderAttendanceAudit()" style="flex:1;min-width:160px">
+      <select class="admin-select" id="audit-filter-type" onchange="renderAttendanceAudit()" style="flex:0 0 130px">
+        <option value="">Semua Jenis</option>
+        <option value="personal">Personal QR</option>
+        <option value="hadir">Group Hadir</option>
+        <option value="titipan">Group Titipan</option>
+      </select>
+      <select class="admin-select" id="audit-filter-group" onchange="renderAttendanceAudit()" style="flex:0 0 150px">
+        <option value="">Semua Rombongan</option>
+      </select>
+      <label class="audit-filter-toggle">
+        <input type="checkbox" id="audit-filter-override" onchange="renderAttendanceAudit()">
+        <span>Hanya override</span>
+      </label>
+    </div>
+
+    <!-- LIST AUDIT -->
+    <div class="audit-result-meta" id="audit-result-meta">Memuat…</div>
+    <div id="audit-list-container" class="audit-list-container">
+      <p style="font-size:11px;color:#888;padding:12px;text-align:center">Belum ada data scan.</p>
+    </div>
+
+    <!-- EXPORT BUTTONS -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed #b88746">
+      <button class="export-btn" onclick="exportAttendanceCSV()" style="flex:1;min-width:160px">⬇ Download Attendance Lengkap (CSV)</button>
+      <button class="export-btn" onclick="exportFilteredAttendanceCSV()" style="flex:1;min-width:160px;background:#b88746">⬇ Download Hasil Filter (CSV)</button>
+      <button class="export-btn" onclick="refreshGroupsList(false)" style="flex:0 0 110px;background:#6b3d1c">⟳ Sync</button>
+    </div>
+  </div>
+
   <!-- LINK PER TAMU -->
   <div class="admin-section">
     <h3>🔗 LINK UNDANGAN PER TAMU</h3>
@@ -5180,10 +5759,30 @@ img[src$="loading.svg"] {
   <div class="scanner-wrap">
     <h2>SCANNER E-TIKET TAMU</h2>
     <p class="scanner-hint">Arahkan kamera ke QR e-tiket tamu untuk validasi pengambilan souvenir.</p>
+    <!-- Receiver bar: nama penerima tamu yg sedang aktif (akuntabilitas audit) -->
+    <div id="scanner-receiver-bar" class="scanner-receiver-bar" style="display:none">
+      <span class="label">Penerima:</span>
+      <span class="value" id="scanner-receiver-name">-</span>
+      <button onclick="promptReceiverName(true)">Ganti</button>
+    </div>
     <div id="qr-reader"></div>
     <div id="scan-result" class="scan-result"></div>
+    <!-- Container untuk group panel (dynamic, hanya muncul saat scan QR rombongan) -->
+    <div id="scanner-group-container"></div>
     <button onclick="resetScanner()" class="scan-reset-btn">Scan Lagi</button>
     <p class="scanner-footer">Mode Scanner · <a href="?">kembali ke undangan</a></p>
+  </div>
+</div>
+
+<!-- ====================================================
+     GROUP DETAIL MODAL — preview siapa yang sudah scan per rombongan
+     ==================================================== -->
+<div id="group-detail-overlay" class="group-detail-overlay" onclick="hideGroupDetail(event)">
+  <div class="group-detail-card" onclick="event.stopPropagation()">
+    <button class="close-x" onclick="hideGroupDetail()" aria-label="Tutup">&times;</button>
+    <h4 id="group-detail-title">Detail Rombongan</h4>
+    <div id="group-detail-stats" style="font-size:12px;color:#6b3d1c;margin-bottom:10px;line-height:1.6"></div>
+    <div id="group-detail-list" style="border-top:1px solid #f3e6c8"></div>
   </div>
 </div>
 
@@ -5241,6 +5840,7 @@ img[src$="loading.svg"] {
      setupGallerySheet_(ss);
      setupRsvpSheet_(ss);
      setupAttendanceSheet_(ss);
+     setupGroupsSheet_(ss);
      try { SpreadsheetApp.getUi().alert('Setup selesai. Sekarang Deploy → Web app, salin URL ke HTML.'); }
      catch (e) { Logger.log('Setup selesai.'); }
    }
@@ -5253,8 +5853,19 @@ img[src$="loading.svg"] {
        SpreadsheetApp.getUi().createMenu('🛠️ Undangan')
          .addItem('Setup awal (isi kalau Content kosong)', 'setupSheet')
          .addItem('Reset Content ke default — HATI-HATI', 'resetContentDefaults')
+         .addSeparator()
+         .addItem('Tambah/Update schema sheet Groups & Attendance', 'migrateSchemaV2')
          .addToUi();
      } catch (e) {}
+   }
+   // Helper migrasi: jalankan sekali kalau sheet existing belum punya tab Groups
+   // atau kolom baru di Attendance. Aman dijalankan berkali-kali (idempotent).
+   function migrateSchemaV2() {
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     setupGroupsSheet_(ss);
+     const att = ss.getSheetByName('Attendance');
+     if (att) ensureAttendanceHeader_(att);
+     try { SpreadsheetApp.getUi().alert('Schema v2 OK. Tab "Groups" + kolom baru "Attendance" siap.'); } catch(e){}
    }
    function setupContentSheet_(ss, force) {
      let sh = ss.getSheetByName('Content') || ss.insertSheet('Content');
@@ -5286,43 +5897,122 @@ img[src$="loading.svg"] {
        sh.setFrozenRows(1);
      }
    }
+   // Schema Attendance v2 — 11 kolom (5 lama + 6 baru untuk fitur group + titipan).
+   // ATTENDANCE_COLS digunakan oleh ensureAttendanceHeader_ untuk auto-migrasi sheet
+   // existing (kolom hilang akan auto-ditambahkan saat redeem berikutnya, data lama aman).
+   const ATTENDANCE_COLS = ['token','name','session','registered_at','redeemed_at',
+                            'group_id','name_input','type','titipan_untuk','received_by','is_override'];
    function setupAttendanceSheet_(ss) {
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
-     if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
-       sh.setFrozenRows(1);
-       sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 240);
-       sh.setColumnWidth(3, 100); sh.setColumnWidth(4, 160);
-       sh.setColumnWidth(5, 160);
-     }
+     ensureAttendanceHeader_(sh);
+     // Atur lebar kolom sekali saat setup
+     const widths = [140, 240, 100, 160, 160, 160, 200, 90, 200, 160, 90];
+     widths.forEach((w, i) => sh.setColumnWidth(i + 1, w));
    }
    function ensureAttendanceHeader_(sh) {
      if (sh.getLastRow() === 0) {
-       sh.appendRow(['token','name','session','registered_at','redeemed_at']);
-       sh.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.appendRow(ATTENDANCE_COLS);
+       sh.getRange(1, 1, 1, ATTENDANCE_COLS.length).setFontWeight('bold').setBackground('#f3e6c8');
        sh.setFrozenRows(1);
+       return;
      }
+     // Migrasi: jika sheet existing punya kolom kurang, tambahkan header baru.
+     const lastCol = sh.getLastColumn();
+     const currentHeader = sh.getRange(1, 1, 1, lastCol).getValues()[0]
+       .map(x => String(x || '').trim().toLowerCase());
+     const missing = ATTENDANCE_COLS.filter(c => currentHeader.indexOf(c) === -1);
+     if (missing.length > 0) {
+       const start = lastCol + 1;
+       sh.getRange(1, start, 1, missing.length).setValues([missing])
+         .setFontWeight('bold').setBackground('#f3e6c8');
+     }
+   }
+   // Helper: cari index kolom by header name (case-insensitive). Return -1 kalau tidak ada.
+   function attendanceColIdx_(sh, colName) {
+     const header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+       .map(x => String(x || '').trim().toLowerCase());
+     return header.indexOf(String(colName).toLowerCase());
+   }
+
+   // ============ GROUPS SHEET (rombongan pakai 1 QR untuk banyak orang) ============
+   const GROUPS_COLS = ['group_id','group_name','session','quota','allow_titipan',
+                        'max_titipan_per_scan','warn_double_claim','created_at','notes'];
+   function setupGroupsSheet_(ss) {
+     let sh = ss.getSheetByName('Groups') || ss.insertSheet('Groups');
+     if (sh.getLastRow() === 0) {
+       sh.appendRow(GROUPS_COLS);
+       sh.getRange(1, 1, 1, GROUPS_COLS.length).setFontWeight('bold').setBackground('#f3e6c8');
+       sh.setFrozenRows(1);
+       const widths = [180, 260, 100, 80, 110, 130, 130, 160, 280];
+       widths.forEach((w, i) => sh.setColumnWidth(i + 1, w));
+       // Contoh 1 row sebagai panduan (boleh dihapus user)
+       sh.appendRow(['rekan_kerja_kantor','Rekan Kerja Kantor','Sesi 1',15,false,1,true,new Date(),
+         'Contoh: ubah/hapus baris ini. allow_titipan & warn_double_claim pakai TRUE/FALSE.']);
+     }
+   }
+   function getGroupRow_(ss, groupId) {
+     const sh = ss.getSheetByName('Groups');
+     if (!sh || sh.getLastRow() < 2) return null;
+     const data = sh.getDataRange().getValues();
+     const header = data[0].map(x => String(x || '').trim().toLowerCase());
+     const idCol = header.indexOf('group_id');
+     if (idCol === -1) return null;
+     for (let i = 1; i < data.length; i++) {
+       if (String(data[i][idCol]).trim() === String(groupId).trim()) {
+         const o = {};
+         header.forEach((k, j) => o[k] = data[i][j]);
+         o._rowIndex = i + 1;
+         return o;
+       }
+     }
+     return null;
    }
 
    // ============ WEB APP ENDPOINTS ============
    function doGet(e) {
      const params = (e && e.parameter) || {};
-     // Scanner penerima tamu — redeem QR token
+     // Scanner penerima tamu — redeem QR token (mode personal)
      if (params.action === 'redeem') {
        return redeemToken(params.token, params.name, params.key);
      }
-     // Admin pre-register token (opsional, untuk sync sheet)
+     // Admin pre-register token personal (opsional)
      if (params.action === 'register') {
        return registerToken(params.token, params.name, params.session, params.key);
      }
-     // Default: return konten + galeri + attendance + rsvp (untuk buku tamu publik)
+     // === GROUP / ROMBONGAN ENDPOINTS ===
+     // Get info group + list nama yang sudah scan (untuk UI scanner mode group)
+     if (params.action === 'getGroupInfo') {
+       return getGroupInfo(params.group, params.key);
+     }
+     // Catat 1 slot kehadiran (hadir atau titipan) ke Attendance.
+     // Required: group, name_input, type=hadir|titipan, key
+     // Optional: titipan_untuk (wajib kalau type=titipan), received_by, override=true
+     if (params.action === 'redeemGroupSlot') {
+       return redeemGroupSlot({
+         group: params.group, name_input: params.name_input, type: params.type,
+         titipan_untuk: params.titipan_untuk, received_by: params.received_by,
+         override: String(params.override || '').toLowerCase() === 'true', key: params.key
+       });
+     }
+     // Admin: register/update group settings (kuota, allow_titipan, dll)
+     if (params.action === 'registerGroup') {
+       return registerGroup({
+         group_id: params.group_id, group_name: params.group_name,
+         session: params.session, quota: params.quota,
+         allow_titipan: String(params.allow_titipan || '').toLowerCase() === 'true',
+         max_titipan_per_scan: params.max_titipan_per_scan,
+         warn_double_claim: String(params.warn_double_claim || 'true').toLowerCase() !== 'false',
+         notes: params.notes, key: params.key
+       });
+     }
+     // Default: return konten + galeri + attendance + rsvp + groups (untuk admin & buku tamu)
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      const out = {
        content: sheetToObject(ss.getSheetByName('Content')),
        gallery: sheetToArray(ss.getSheetByName('Gallery')),
        attendance: sheetToArray(ss.getSheetByName('Attendance')),
-       rsvp: sheetToArray(ss.getSheetByName('RSVP'))
+       rsvp: sheetToArray(ss.getSheetByName('RSVP')),
+       groups: sheetToArray(ss.getSheetByName('Groups'))
      };
      return ContentService.createTextOutput(JSON.stringify(out))
        .setMimeType(ContentService.MimeType.JSON);
@@ -5408,6 +6098,247 @@ img[src$="loading.svg"] {
      return ContentService.createTextOutput(JSON.stringify({
        success: true, registered: true
      })).setMimeType(ContentService.MimeType.JSON);
+   }
+
+   // ============ GROUP ENDPOINTS (Alur 2 — group QR + input nama + titipan opsional) ============
+   function jsonOut_(obj) {
+     return ContentService.createTextOutput(JSON.stringify(obj))
+       .setMimeType(ContentService.MimeType.JSON);
+   }
+   function normName_(s) {
+     // Normalisasi nama untuk perbandingan: trim, lowercase, hilangkan spasi ganda & titik gelar.
+     return String(s || '').trim().toLowerCase()
+       .replace(/\s+/g, ' ')
+       .replace(/\.+/g, '');
+   }
+   function readAttendance_(ss) {
+     const sh = ss.getSheetByName('Attendance');
+     if (!sh || sh.getLastRow() < 2) return { sh: sh, header: [], rows: [] };
+     ensureAttendanceHeader_(sh);
+     const data = sh.getDataRange().getValues();
+     const header = data[0].map(x => String(x || '').trim().toLowerCase());
+     const rows = data.slice(1).map(r => {
+       const o = {}; header.forEach((k, i) => o[k] = r[i]); return o;
+     });
+     return { sh: sh, header: header, rows: rows };
+   }
+
+   // GET /exec?action=getGroupInfo&group=<id>&key=<scanner_key>
+   // Response: { success, group: {...settings...}, attended: [{name_input, type, titipan_untuk, timestamp, received_by}], totalClaimed, hadirCount, titipanCount }
+   function getGroupInfo(groupId, key) {
+     if (!key || key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     if (!groupId) return jsonOut_({ success: false, error: 'group id wajib' });
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     const grp = getGroupRow_(ss, groupId);
+     if (!grp) return jsonOut_({ success: false, error: 'Group "' + groupId + '" tidak ditemukan di sheet Groups' });
+     const { rows } = readAttendance_(ss);
+     const attended = rows.filter(r => String(r.group_id || '').trim() === String(groupId).trim())
+       .map(r => ({
+         name_input: r.name_input || '',
+         type: r.type || 'hadir',
+         titipan_untuk: r.titipan_untuk || '',
+         timestamp: r.redeemed_at ? new Date(r.redeemed_at).toISOString() : '',
+         received_by: r.received_by || '',
+         is_override: r.is_override === true || String(r.is_override).toLowerCase() === 'true'
+       }))
+       .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+     const hadirCount = attended.filter(a => a.type === 'hadir').length;
+     const titipanCount = attended.filter(a => a.type === 'titipan').length;
+     return jsonOut_({
+       success: true,
+       group: {
+         group_id: grp.group_id,
+         group_name: grp.group_name || '',
+         session: grp.session || '',
+         quota: Number(grp.quota) || 0,
+         allow_titipan: grp.allow_titipan === true || String(grp.allow_titipan).toLowerCase() === 'true',
+         max_titipan_per_scan: Number(grp.max_titipan_per_scan) || 1,
+         warn_double_claim: grp.warn_double_claim === true || String(grp.warn_double_claim).toLowerCase() === 'true' || grp.warn_double_claim === '' || grp.warn_double_claim == null,
+         notes: grp.notes || ''
+       },
+       attended: attended,
+       totalClaimed: attended.length,
+       hadirCount: hadirCount,
+       titipanCount: titipanCount
+     });
+   }
+
+   // GET /exec?action=redeemGroupSlot&group=<id>&name_input=<nama>&type=hadir|titipan&titipan_untuk=<...>&received_by=<...>&override=true|false&key=<...>
+   function redeemGroupSlot(p) {
+     if (!p.key || p.key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     if (!p.group)      return jsonOut_({ success: false, error: 'group wajib diisi' });
+     if (!p.name_input) return jsonOut_({ success: false, error: 'nama tamu wajib diisi' });
+     const type = (p.type === 'titipan') ? 'titipan' : 'hadir';
+     if (type === 'titipan' && !p.titipan_untuk) {
+       return jsonOut_({ success: false, error: 'titipan_untuk wajib diisi untuk type=titipan' });
+     }
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     const grp = getGroupRow_(ss, p.group);
+     if (!grp) return jsonOut_({ success: false, error: 'Group "' + p.group + '" tidak ditemukan' });
+
+     const allowTitipan = grp.allow_titipan === true || String(grp.allow_titipan).toLowerCase() === 'true';
+     if (type === 'titipan' && !allowTitipan) {
+       return jsonOut_({ success: false, error: 'Group ini TIDAK mengizinkan titipan (kebijakan: hanya yang hadir).' });
+     }
+     // Sanity: nama tamu dan nama titipan tidak boleh sama
+     if (type === 'titipan' && normName_(p.name_input) === normName_(p.titipan_untuk)) {
+       return jsonOut_({ success: false, error: 'Nama tamu tidak boleh sama dengan nama titipan.' });
+     }
+
+     const { sh, header, rows } = readAttendance_(ss);
+     const sameGroupRows = rows.filter(r => String(r.group_id || '').trim() === String(p.group).trim());
+
+     // === RULE: Hard-block double-claim untuk titipan ===
+     // Kalau type=titipan, cek apakah "titipan_untuk" sudah pernah HADIR sendiri di group ini.
+     if (type === 'titipan') {
+       const dup = sameGroupRows.find(r =>
+         String(r.type || '').toLowerCase() === 'hadir' &&
+         normName_(r.name_input) === normName_(p.titipan_untuk)
+       );
+       if (dup) {
+         return jsonOut_({
+           success: false,
+           hardBlock: true,
+           error: '"' + p.titipan_untuk + '" sudah hadir sendiri jam ' +
+                  (dup.redeemed_at ? new Date(dup.redeemed_at).toISOString() : '-') +
+                  '. Titipan ditolak (policy: hard-block).'
+         });
+       }
+       // Cek juga: titipan_untuk sudah pernah dititipkan sebelumnya oleh tamu lain?
+       const dupTitip = sameGroupRows.find(r =>
+         String(r.type || '').toLowerCase() === 'titipan' &&
+         normName_(r.titipan_untuk) === normName_(p.titipan_untuk)
+       );
+       if (dupTitip) {
+         return jsonOut_({
+           success: false,
+           hardBlock: true,
+           error: '"' + p.titipan_untuk + '" sudah pernah dititipkan oleh ' +
+                  (dupTitip.name_input || 'tamu lain') + ' jam ' +
+                  (dupTitip.redeemed_at ? new Date(dupTitip.redeemed_at).toISOString() : '-') +
+                  '. Titipan ditolak (policy: hard-block).'
+         });
+       }
+     }
+
+     // === WARNING (override-able): nama tamu (hadir) sama persis sudah pernah scan ===
+     if (type === 'hadir' && !p.override) {
+       const warnDouble = grp.warn_double_claim !== false && String(grp.warn_double_claim).toLowerCase() !== 'false';
+       if (warnDouble) {
+         const dup = sameGroupRows.find(r =>
+           String(r.type || '').toLowerCase() === 'hadir' &&
+           normName_(r.name_input) === normName_(p.name_input)
+         );
+         if (dup) {
+           return jsonOut_({
+             success: false,
+             needConfirm: true,
+             code: 'duplicate_name',
+             message: '"' + p.name_input + '" sudah pernah scan di group ini jam ' +
+                      (dup.redeemed_at ? new Date(dup.redeemed_at).toISOString() : '-') +
+                      '. Tetap berikan souvenir?',
+             previousReceivedBy: dup.received_by || ''
+           });
+         }
+       }
+     }
+
+     // === WARNING (override-able): kuota terlampaui ===
+     const quota = Number(grp.quota) || 0;
+     const willExceed = quota > 0 && (sameGroupRows.length + 1) > quota;
+     if (willExceed && !p.override) {
+       return jsonOut_({
+         success: false,
+         needConfirm: true,
+         code: 'quota_exceeded',
+         message: 'Kuota rombongan ' + quota + ' akan terlampaui (sudah ' +
+                  sameGroupRows.length + '). Lanjut?'
+       });
+     }
+
+     // === Semua aman → tulis ke Attendance ===
+     const now = new Date();
+     const row = ATTENDANCE_COLS.map(col => {
+       switch (col) {
+         case 'token':          return p.group;
+         case 'name':           return grp.group_name || '';
+         case 'session':        return grp.session || '';
+         case 'registered_at':  return now;
+         case 'redeemed_at':    return now;
+         case 'group_id':       return p.group;
+         case 'name_input':     return String(p.name_input || '').trim();
+         case 'type':           return type;
+         case 'titipan_untuk':  return type === 'titipan' ? String(p.titipan_untuk || '').trim() : '';
+         case 'received_by':    return String(p.received_by || '').trim();
+         case 'is_override':    return !!p.override;
+         default:               return '';
+       }
+     });
+     sh.appendRow(row);
+     return jsonOut_({
+       success: true,
+       slot: {
+         group_id: p.group,
+         name_input: p.name_input,
+         type: type,
+         titipan_untuk: type === 'titipan' ? p.titipan_untuk : '',
+         timestamp: now.toISOString(),
+         received_by: p.received_by || '',
+         is_override: !!p.override
+       },
+       totalClaimedNow: sameGroupRows.length + 1
+     });
+   }
+
+   // GET /exec?action=registerGroup&group_id=<id>&group_name=<...>&session=<...>&quota=<n>&allow_titipan=true|false&max_titipan_per_scan=<n>&warn_double_claim=true|false&notes=<...>&key=<...>
+   function registerGroup(p) {
+     if (!p.key || p.key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     if (!p.group_id) return jsonOut_({ success: false, error: 'group_id wajib' });
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     setupGroupsSheet_(ss); // pastikan sheet ada
+     const sh = ss.getSheetByName('Groups');
+     const data = sh.getDataRange().getValues();
+     const header = data[0].map(x => String(x || '').trim().toLowerCase());
+     const idCol = header.indexOf('group_id');
+     // Cek existing row
+     for (let i = 1; i < data.length; i++) {
+       if (String(data[i][idCol]).trim() === String(p.group_id).trim()) {
+         // Update existing row
+         const updated = GROUPS_COLS.map((col, j) => {
+           switch (col) {
+             case 'group_id':            return p.group_id;
+             case 'group_name':          return p.group_name != null ? p.group_name : data[i][j];
+             case 'session':             return p.session != null ? p.session : data[i][j];
+             case 'quota':               return p.quota != null ? Number(p.quota) : data[i][j];
+             case 'allow_titipan':       return !!p.allow_titipan;
+             case 'max_titipan_per_scan':return p.max_titipan_per_scan != null ? Number(p.max_titipan_per_scan) : (data[i][j] || 1);
+             case 'warn_double_claim':   return p.warn_double_claim !== false;
+             case 'created_at':          return data[i][j] || new Date();
+             case 'notes':               return p.notes != null ? p.notes : (data[i][j] || '');
+             default:                    return data[i][j];
+           }
+         });
+         sh.getRange(i + 1, 1, 1, GROUPS_COLS.length).setValues([updated]);
+         return jsonOut_({ success: true, updated: true, group_id: p.group_id });
+       }
+     }
+     // Insert new
+     const row = GROUPS_COLS.map(col => {
+       switch (col) {
+         case 'group_id':            return p.group_id;
+         case 'group_name':          return p.group_name || '';
+         case 'session':             return p.session || '';
+         case 'quota':               return Number(p.quota) || 0;
+         case 'allow_titipan':       return !!p.allow_titipan;
+         case 'max_titipan_per_scan':return Number(p.max_titipan_per_scan) || 1;
+         case 'warn_double_claim':   return p.warn_double_claim !== false;
+         case 'created_at':          return new Date();
+         case 'notes':               return p.notes || '';
+         default:                    return '';
+       }
+     });
+     sh.appendRow(row);
+     return jsonOut_({ success: true, created: true, group_id: p.group_id });
    }
 
    // ============ SHEET HELPERS (formatCell handle waktu & tanggal) ============
@@ -5631,6 +6562,12 @@ let SHEET_ATTENDANCE_MAP = {};
 // Daftar ucapan & doa dari tab "RSVP" supaya tamu lain bisa membaca (buku tamu publik).
 // Sudah di-sort newest-first saat di-set di loadSheetContent().
 let SHEET_RSVP_LIST = [];
+// Daftar rombongan dari tab "Groups" (untuk admin panel manajemen rombongan).
+let SHEET_GROUPS_LIST = [];
+// Map group_id -> count attendance (hadir + titipan) yang sudah di-scan.
+let SHEET_GROUP_STATS = {};
+// Raw attendance rows (untuk audit log lengkap di admin panel — semua kolom).
+let SHEET_ATTENDANCE_LIST = [];
 
 async function loadSheetContent() {
   if (!CONFIG.SHEET_DATA_URL) return;
@@ -5665,8 +6602,36 @@ async function loadSheetContent() {
         message: row.message || '',
         source: 'sheet'
       }));
+    // Build Groups list + count stats per group (untuk admin panel & scanner UI)
+    SHEET_GROUPS_LIST = (data.groups || []).filter(row => row && String(row.group_id || '').trim() !== '');
+    SHEET_GROUP_STATS = {};
+    SHEET_ATTENDANCE_LIST = (data.attendance || []).map(row => ({
+      token: row.token || '',
+      name: row.name || '',
+      session: row.session || '',
+      registered_at: row.registered_at || '',
+      redeemed_at: row.redeemed_at || '',
+      group_id: row.group_id || '',
+      name_input: row.name_input || '',
+      type: row.type || '',
+      titipan_untuk: row.titipan_untuk || '',
+      received_by: row.received_by || '',
+      is_override: row.is_override === true || String(row.is_override).toLowerCase() === 'true'
+    }));
+    SHEET_ATTENDANCE_LIST.forEach(row => {
+      const gid = String(row.group_id || '').trim();
+      if (!gid) return;
+      if (!SHEET_GROUP_STATS[gid]) SHEET_GROUP_STATS[gid] = { hadir: 0, titipan: 0, total: 0, overrides: 0 };
+      const t = String(row.type || '').toLowerCase();
+      if (t === 'titipan') SHEET_GROUP_STATS[gid].titipan++;
+      else                 SHEET_GROUP_STATS[gid].hadir++;
+      SHEET_GROUP_STATS[gid].total++;
+      if (row.is_override) SHEET_GROUP_STATS[gid].overrides++;
+    });
     // Re-render wishes supaya badge "Sudah Hadir" + data spreadsheet ikut tampil
     if (typeof renderWishes === 'function') renderWishes();
+    if (typeof renderGroupsList === 'function') renderGroupsList();
+    if (typeof renderAttendanceAudit === 'function') renderAttendanceAudit();
     if (typeof getGuestFromURL === 'function') getGuestFromURL();
   } catch (err) {
     console.warn('[Sheet] gagal load, pakai default:', err);
@@ -6553,6 +7518,9 @@ function openAdmin() {
   renderAdminRSVPs();
   renderGuestLinks();
   renderScannerUrl();
+  renderGroupsList();          // Render list rombongan dari cache (kalau sudah ada)
+  renderAttendanceAudit();     // Render audit log dari cache
+  refreshGroupsList(true);     // Lalu fetch fresh dari sheet (background) — akan trigger ulang
 }
 
 function closeAdmin() {
@@ -7466,6 +8434,10 @@ async function initScannerMode(providedKey) {
   }
   _scannerActiveKey = providedKey;
 
+  // Prompt nama penerima tamu sekali per sesi (untuk audit trail di sheet Attendance)
+  ensureReceiverName();
+  updateReceiverBar();
+
   // Load html5-qrcode dynamically (hanya saat butuh)
   if (typeof Html5Qrcode === 'undefined') {
     await loadScript('https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js');
@@ -7474,11 +8446,14 @@ async function initScannerMode(providedKey) {
     document.getElementById('qr-reader').innerHTML = '<p style="color:#fff;padding:20px">Gagal load scanner library. Cek koneksi internet.</p>';
     return;
   }
-  // Cek apakah URL sudah include token (auto-validate)
+  // Cek URL params untuk auto-validate (token personal atau group QR)
   const params = new URLSearchParams(location.search);
+  const groupFromUrl = params.get('group');
   const tokenFromUrl = params.get('t');
-  const nameFromUrl = params.get('n') ? decodeURIComponent(params.get('n')) : '';
-  if (tokenFromUrl) {
+  const nameFromUrl  = params.get('n') ? decodeURIComponent(params.get('n')) : '';
+  if (groupFromUrl) {
+    handleGroupScanned(groupFromUrl);
+  } else if (tokenFromUrl) {
     handleScannedData(tokenFromUrl, nameFromUrl);
   }
   startCameraScanner();
@@ -7554,16 +8529,23 @@ function startCameraScanner() {
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
       _scannerInstance.pause(true);
-      // Parse URL or raw token
-      let token = '', name = '';
+      // Parse URL — deteksi mode: group rombongan vs personal QR
+      let token = '', name = '', groupId = '';
       try {
         const u = new URL(decodedText);
-        token = u.searchParams.get('t') || '';
-        name = decodeURIComponent(u.searchParams.get('n') || '');
+        groupId = u.searchParams.get('group') || '';
+        token   = u.searchParams.get('t') || '';
+        name    = decodeURIComponent(u.searchParams.get('n') || '');
       } catch {
+        // Bukan URL valid → treat sebagai raw token personal
         token = decodedText;
       }
-      handleScannedData(token, name);
+      // Route ke handler yang sesuai
+      if (groupId) {
+        handleGroupScanned(groupId);
+      } else {
+        handleScannedData(token, name);
+      }
     },
     () => {}
   ).catch(err => {
@@ -7574,9 +8556,298 @@ function startCameraScanner() {
 
 function resetScanner() {
   showScanResult('', '');
+  // Bersihkan group panel kalau sedang aktif
+  const grpContainer = document.getElementById('scanner-group-container');
+  if (grpContainer) grpContainer.innerHTML = '';
   if (_scannerInstance) {
     try { _scannerInstance.resume(); } catch (e) {}
   }
+}
+
+/* =========================================================
+   RECEIVER NAME — siapa penerima tamu yang sedang scan
+   Disimpan di localStorage per device, dipakai untuk audit
+   trail di sheet Attendance (kolom received_by).
+   ========================================================= */
+const RECEIVER_KEY = 'scanner_received_by_cf';
+function getReceiverName() {
+  try { return localStorage.getItem(RECEIVER_KEY) || ''; } catch { return ''; }
+}
+function setReceiverName(n) {
+  try { localStorage.setItem(RECEIVER_KEY, String(n || '').trim()); } catch {}
+}
+function ensureReceiverName() {
+  // Kalau belum pernah set, prompt sekali. User boleh skip (kosong) tapi kena warning toast.
+  if (getReceiverName()) return;
+  const n = prompt(
+    'Halo penerima tamu! 👋\n\n' +
+    'Untuk audit trail, mohon ketik nama Anda (akan tersimpan & dipakai untuk semua scan berikutnya):\n\n' +
+    'Contoh: Mas Andi, Bu Sari, Pak Joko (Booth 1)',
+    ''
+  );
+  if (n && n.trim()) {
+    setReceiverName(n.trim());
+  } else {
+    showToast('⚠️ Nama penerima tidak diisi. Scan tetap bisa, tapi tidak ter-audit.', 'error');
+  }
+}
+function promptReceiverName(force) {
+  const current = getReceiverName();
+  const n = prompt(
+    'Ganti nama penerima tamu yang aktif:\n' +
+    '(Saat ini: ' + (current || '— belum diisi —') + ')',
+    current
+  );
+  if (n !== null) {
+    setReceiverName(n.trim());
+    updateReceiverBar();
+    showToast(n.trim() ? `✓ Penerima diubah ke: ${n.trim()}` : '⚠ Nama penerima dikosongkan', n.trim() ? 'success' : 'error');
+  }
+}
+function updateReceiverBar() {
+  const bar = document.getElementById('scanner-receiver-bar');
+  const val = document.getElementById('scanner-receiver-name');
+  if (!bar || !val) return;
+  const n = getReceiverName();
+  val.textContent = n || '— belum diisi (klik Ganti) —';
+  bar.style.display = 'flex';
+}
+
+/* =========================================================
+   GROUP SCAN HANDLER — mode rombongan dengan input nama per orang
+   ========================================================= */
+let _currentGroupId = null;
+let _currentGroupInfo = null;
+
+async function handleGroupScanned(groupId) {
+  _currentGroupId = groupId;
+  showScanResult('warning', '<em>Memuat info rombongan...</em>');
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) {
+    showScanResult('error', '<strong>Spreadsheet belum dikonfigurasi.</strong>');
+    return;
+  }
+  try {
+    const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
+              + '&key=' + encodeURIComponent(_scannerActiveKey || '');
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      showScanResult('error', `<strong>✗ HTTP ${res.status}</strong>`);
+      return;
+    }
+    const json = await res.json();
+    if (!json.success) {
+      showScanResult('error', `<strong>✗ ${escapeHtml(json.error || 'Gagal load group')}</strong>`);
+      return;
+    }
+    _currentGroupInfo = json;
+    showScanResult('', '');
+    renderGroupScanPanel(json);
+  } catch (err) {
+    showScanResult('error', `<strong>✗ Network error</strong><br>${escapeHtml(err.message)}`);
+  }
+}
+
+function renderGroupScanPanel(info) {
+  const container = document.getElementById('scanner-group-container');
+  if (!container) return;
+  const g = info.group;
+  const total   = info.totalClaimed || 0;
+  const quota   = g.quota || 0;
+  const filled  = quota > 0 ? Math.round(total / quota * 100) : 0;
+  const fillCls = filled >= 100 ? 'is-full' : filled >= 80 ? 'is-warning' : '';
+
+  // Render badge list semua nama yang sudah scan (paling baru di kiri)
+  const attendedHtml = info.attended.length === 0
+    ? '<em style="color:#888">Belum ada yang scan di rombongan ini.</em>'
+    : info.attended.slice(0, 20).map(a => {
+        const isT = a.type === 'titipan';
+        const label = isT
+          ? `${escapeHtml(a.name_input)} → ${escapeHtml(a.titipan_untuk || '?')}`
+          : escapeHtml(a.name_input);
+        return `<span class="pill ${isT ? 'is-titipan' : ''}" title="${escapeAttr(a.timestamp || '')}">${label}</span>`;
+      }).join(' ')
+      + (info.attended.length > 20 ? ` <em>...+${info.attended.length - 20} lainnya</em>` : '');
+
+  // Form hadir + titipan toggle (kondisional)
+  const titipanToggle = g.allow_titipan
+    ? `<label class="scanner-titipan-toggle">
+         <input type="checkbox" id="grp-scan-bring-titipan" onchange="toggleScannerTitipan()">
+         <span>+ Bawa titipan (max ${g.max_titipan_per_scan} per tamu)</span>
+       </label>`
+    : `<label class="scanner-titipan-toggle is-disabled" title="Group ini tidak mengizinkan titipan">
+         <input type="checkbox" disabled>
+         <span>✕ Titipan tidak diizinkan untuk rombongan ini</span>
+       </label>`;
+
+  container.innerHTML = `
+    <div class="scanner-group-panel">
+      <h3>${escapeHtml(g.group_name || g.group_id)}</h3>
+      <div class="group-sub">ID: ${escapeHtml(g.group_id)} · Sesi: ${escapeHtml(g.session || '-')}</div>
+      <div class="scanner-group-counter">
+        <div class="stat ${fillCls}"><div class="num">${total}${quota ? '/'+quota : ''}</div><div class="lbl">Total Klaim</div></div>
+        <div class="stat"><div class="num">${info.hadirCount}</div><div class="lbl">Hadir Sendiri</div></div>
+        <div class="stat"><div class="num">${info.titipanCount}</div><div class="lbl">Titipan</div></div>
+      </div>
+      <div class="scanner-attended-summary"><strong>Sudah scan:</strong><br>${attendedHtml}</div>
+
+      <form class="scanner-group-form" onsubmit="submitGroupSlot(event); return false;">
+        <input type="text" id="grp-scan-name" placeholder="Nama tamu yang datang sekarang…" autocomplete="off" required>
+        ${titipanToggle}
+        <div class="scanner-titipan-block" id="grp-scan-titipan-wrap">
+          <span class="titipan-label">Titipan untuk siapa?</span>
+          <input type="text" id="grp-scan-titipan-for" placeholder="Nama orang yang dititipi (tidak hadir)" autocomplete="off">
+        </div>
+        <div id="grp-scan-banner"></div>
+        <div class="scanner-group-actions">
+          <button type="button" class="btn-cancel" onclick="cancelGroupScan()">Batal</button>
+          <button type="submit" class="btn-confirm" id="grp-scan-submit">✓ Konfirmasi & Beri Souvenir</button>
+        </div>
+      </form>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('grp-scan-name')?.focus(), 50);
+}
+
+function toggleScannerTitipan() {
+  const cb = document.getElementById('grp-scan-bring-titipan');
+  const wrap = document.getElementById('grp-scan-titipan-wrap');
+  if (!cb || !wrap) return;
+  wrap.classList.toggle('show', cb.checked);
+  if (cb.checked) {
+    setTimeout(() => document.getElementById('grp-scan-titipan-for')?.focus(), 50);
+  }
+}
+
+function cancelGroupScan() {
+  const container = document.getElementById('scanner-group-container');
+  if (container) container.innerHTML = '';
+  _currentGroupId = null;
+  _currentGroupInfo = null;
+  showScanResult('', '');
+  if (_scannerInstance) {
+    try { _scannerInstance.resume(); } catch (e) {}
+  }
+}
+
+async function submitGroupSlot(e, overrideFlag) {
+  if (e && e.preventDefault) e.preventDefault();
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  const groupId = _currentGroupId;
+  if (!baseUrl || !groupId) return;
+
+  const nameInput = (document.getElementById('grp-scan-name')?.value || '').trim();
+  const bringT    = document.getElementById('grp-scan-bring-titipan')?.checked || false;
+  const titipFor  = (document.getElementById('grp-scan-titipan-for')?.value || '').trim();
+  const receivedBy = getReceiverName();
+
+  if (!nameInput) {
+    showToast('Nama tamu wajib diisi', 'error');
+    document.getElementById('grp-scan-name')?.focus();
+    return;
+  }
+  if (bringT && !titipFor) {
+    showToast('Centang titipan tapi nama titipan kosong. Isi atau matikan centang.', 'error');
+    document.getElementById('grp-scan-titipan-for')?.focus();
+    return;
+  }
+
+  const btn = document.getElementById('grp-scan-submit');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'MEMPROSES…'; }
+
+  try {
+    // === 1) Submit nama HADIR ===
+    const r1 = await callRedeemGroupSlot(baseUrl, groupId, nameInput, 'hadir', '', receivedBy, !!overrideFlag);
+    if (!r1.success) {
+      // Hard block (titipan duplikat) tidak applicable di sini, tapi handle generic
+      if (r1.hardBlock) {
+        renderHardBlockBanner(r1.error);
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+        return;
+      }
+      if (r1.needConfirm) {
+        renderConfirmBanner(r1, () => submitGroupSlot(null, true));
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+        return;
+      }
+      showToast('✕ ' + (r1.error || 'Gagal'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      return;
+    }
+    // === 2) Submit titipan (kalau ada) — selalu type=titipan, tidak butuh override ===
+    if (bringT && titipFor) {
+      const r2 = await callRedeemGroupSlot(baseUrl, groupId, nameInput, 'titipan', titipFor, receivedBy, false);
+      if (!r2.success) {
+        if (r2.hardBlock) {
+          // Hadir sudah masuk, tapi titipan ditolak — kasih notif jelas
+          showToast('✓ Hadir tercatat. ✕ TITIPAN DITOLAK: ' + r2.error, 'error');
+        } else {
+          showToast('✓ Hadir tercatat. Titipan gagal: ' + r2.error, 'error');
+        }
+      } else {
+        showToast(`✓ "${nameInput}" + titipan untuk "${titipFor}" tercatat. Berikan 2 souvenir.`, 'success');
+      }
+    } else {
+      showToast(`✓ "${nameInput}" tercatat. Berikan 1 souvenir.`, 'success');
+    }
+    // === 3) Refresh info group → panel muncul ulang dengan data terbaru ===
+    await handleGroupScanned(groupId);
+  } catch (err) {
+    showToast('✕ Network: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+async function callRedeemGroupSlot(baseUrl, group, nameInput, type, titipanFor, receivedBy, override) {
+  const url = baseUrl
+    + '?action=redeemGroupSlot'
+    + '&group=' + encodeURIComponent(group)
+    + '&name_input=' + encodeURIComponent(nameInput)
+    + '&type=' + encodeURIComponent(type)
+    + (type === 'titipan' ? '&titipan_untuk=' + encodeURIComponent(titipanFor) : '')
+    + '&received_by=' + encodeURIComponent(receivedBy || '')
+    + (override ? '&override=true' : '')
+    + '&key=' + encodeURIComponent(_scannerActiveKey || '');
+  const res = await fetch(url, { cache: 'no-store' });
+  return await res.json();
+}
+
+function renderConfirmBanner(resp, onYes) {
+  const banner = document.getElementById('grp-scan-banner');
+  if (!banner) return;
+  banner.innerHTML = `
+    <div class="scanner-confirm-banner">
+      <strong>⚠ Perlu Konfirmasi</strong><br>
+      ${escapeHtml(resp.message || '')}
+      ${resp.previousReceivedBy ? `<br><small>Diterima sebelumnya oleh: <strong>${escapeHtml(resp.previousReceivedBy)}</strong></small>` : ''}
+      <div class="actions">
+        <button class="no" type="button" onclick="document.getElementById('grp-scan-banner').innerHTML=''">Batal</button>
+        <button class="yes" type="button" id="grp-scan-yes">Ya, tetap berikan</button>
+      </div>
+    </div>
+  `;
+  setTimeout(() => {
+    document.getElementById('grp-scan-yes')?.addEventListener('click', () => {
+      banner.innerHTML = '';
+      onYes();
+    });
+  }, 10);
+}
+
+function renderHardBlockBanner(errMsg) {
+  const banner = document.getElementById('grp-scan-banner');
+  if (!banner) return;
+  banner.innerHTML = `
+    <div class="scanner-hardblock-banner">
+      <div class="icon">🛑</div>
+      <strong>DITOLAK</strong><br>
+      ${escapeHtml(errMsg || 'Hard-block policy')}
+      <div style="margin-top:10px;font-size:11px;opacity:0.9">
+        <em>Tidak dapat di-override (sesuai kebijakan). Cek nama atau koordinasi dengan admin.</em>
+      </div>
+    </div>
+  `;
 }
 
 function showScanResult(level, msg) {
@@ -7693,6 +8964,710 @@ function shareScannerUrlWA() {
   const url = getScannerUrl();
   const msg = `Halo, ini link scanner untuk penerima tamu / petugas souvenir di pernikahan Cintya & Fathoni:\n\n${url}\n\nCara pakai:\n1. Buka link di HP\n2. Izinkan akses kamera\n3. Arahkan ke QR e-tiket tamu yang datang\n4. Sistem otomatis validasi - kalau hijau (VALID), beri souvenir. Kalau kuning (SUDAH DIPAKAI), tolak.\n\nSimpan link ini di favorit HP. Jangan share ke selain staff.`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+/* =========================================================
+   GROUP / ROMBONGAN MANAGEMENT (admin panel)
+   Memakai endpoint Apps Script: registerGroup, getGroupInfo, redeemGroupSlot
+   ========================================================= */
+
+// Slugify: "Rekan Kerja Kantor" -> "rekan_kerja_kantor"
+function slugifyGroupId(name) {
+  return String(name || '').trim().toLowerCase()
+    .replace(/[^a-z0-9\s_-]/g, '')
+    .replace(/[\s-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40);
+}
+function autoSuggestGroupId() {
+  const nameEl = document.getElementById('grp-name');
+  const idEl   = document.getElementById('grp-id');
+  if (!nameEl || !idEl) return;
+  // Hanya auto-isi kalau user belum sentuh field id manual
+  if (idEl.dataset.userTouched === '1') return;
+  idEl.value = slugifyGroupId(nameEl.value);
+}
+function toggleTitipanFields() {
+  const cb = document.getElementById('grp-allow-titipan');
+  const wrap = document.getElementById('grp-max-titipan-wrap');
+  if (!cb || !wrap) return;
+  wrap.style.display = cb.checked ? 'inline-flex' : 'none';
+}
+function resetGroupForm() {
+  ['grp-name','grp-id','grp-quota','grp-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = (id === 'grp-quota') ? '15' : '';
+  });
+  const idEl = document.getElementById('grp-id');
+  if (idEl) idEl.dataset.userTouched = '0';
+  document.getElementById('grp-session').value = 'Sesi 1';
+  document.getElementById('grp-allow-titipan').checked = false;
+  document.getElementById('grp-max-titipan').value = '1';
+  document.getElementById('grp-warn-double').checked = true;
+  toggleTitipanFields();
+  const btn = document.getElementById('grp-save-btn');
+  if (btn) btn.textContent = '+ TAMBAH ROMBONGAN';
+}
+
+// Save group (via registerGroup endpoint) — handle both insert & update via same call
+async function saveGroup() {
+  const baseUrl = CONFIG.GOOGLE_SCRIPT_URL || CONFIG.SHEET_DATA_URL;
+  if (!baseUrl) {
+    showToast('CONFIG.GOOGLE_SCRIPT_URL kosong. Set URL Apps Script dulu.', 'error');
+    return;
+  }
+  const name  = document.getElementById('grp-name').value.trim();
+  const idRaw = document.getElementById('grp-id').value.trim();
+  const id    = idRaw || slugifyGroupId(name);
+  if (!name) { showToast('Nama rombongan wajib diisi', 'error'); return; }
+  if (!id)   { showToast('Group ID tidak valid', 'error'); return; }
+  const session = document.getElementById('grp-session').value;
+  const quota   = parseInt(document.getElementById('grp-quota').value || '0', 10);
+  const allowTitipan = document.getElementById('grp-allow-titipan').checked;
+  const maxTitipan   = parseInt(document.getElementById('grp-max-titipan').value || '1', 10);
+  const warnDouble   = document.getElementById('grp-warn-double').checked;
+  const notes = document.getElementById('grp-notes').value.trim();
+
+  const btn = document.getElementById('grp-save-btn');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'MENYIMPAN…'; }
+
+  const url = baseUrl
+    + '?action=registerGroup'
+    + '&group_id=' + encodeURIComponent(id)
+    + '&group_name=' + encodeURIComponent(name)
+    + '&session=' + encodeURIComponent(session)
+    + '&quota=' + encodeURIComponent(quota)
+    + '&allow_titipan=' + (allowTitipan ? 'true' : 'false')
+    + '&max_titipan_per_scan=' + encodeURIComponent(maxTitipan)
+    + '&warn_double_claim=' + (warnDouble ? 'true' : 'false')
+    + '&notes=' + encodeURIComponent(notes)
+    + '&key=' + encodeURIComponent(CONFIG.scannerKey || '');
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`✓ Rombongan "${name}" ${json.updated ? 'diperbarui' : 'ditambahkan'}.`, 'success');
+      resetGroupForm();
+      await refreshGroupsList(true);
+    } else {
+      showToast('✕ Gagal: ' + (json.error || 'unknown error'), 'error');
+    }
+  } catch (err) {
+    showToast('✕ Network error: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+  }
+}
+
+// Edit existing group → isi form dengan data lama
+function editGroup(groupId) {
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  if (!grp) { showToast('Group tidak ditemukan', 'error'); return; }
+  document.getElementById('grp-name').value    = grp.group_name || '';
+  document.getElementById('grp-id').value      = grp.group_id || '';
+  document.getElementById('grp-id').dataset.userTouched = '1';
+  document.getElementById('grp-session').value = grp.session || 'Sesi 1';
+  document.getElementById('grp-quota').value   = grp.quota || 15;
+  document.getElementById('grp-allow-titipan').checked =
+    grp.allow_titipan === true || String(grp.allow_titipan).toLowerCase() === 'true';
+  document.getElementById('grp-max-titipan').value = String(grp.max_titipan_per_scan || 1);
+  document.getElementById('grp-warn-double').checked =
+    grp.warn_double_claim === true || String(grp.warn_double_claim).toLowerCase() === 'true' ||
+    grp.warn_double_claim === '' || grp.warn_double_claim == null;
+  document.getElementById('grp-notes').value = grp.notes || '';
+  toggleTitipanFields();
+  const btn = document.getElementById('grp-save-btn');
+  if (btn) btn.textContent = '💾 UPDATE ROMBONGAN';
+  // Scroll form ke view
+  document.getElementById('grp-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('grp-name').focus();
+}
+
+// Refresh: re-fetch dari sheet
+async function refreshGroupsList(silent) {
+  if (typeof loadSheetContent === 'function') {
+    if (!silent) showToast('Memuat ulang daftar rombongan…', 'info');
+    await loadSheetContent();
+    // loadSheetContent sudah otomatis panggil renderGroupsList() via hook
+  }
+}
+
+// Render list groups ke admin panel
+function renderGroupsList() {
+  const c = document.getElementById('admin-groups-list');
+  if (!c) return;
+  const groups = Array.isArray(SHEET_GROUPS_LIST) ? SHEET_GROUPS_LIST : [];
+  if (groups.length === 0) {
+    c.innerHTML = '<p style="font-size:11px;color:#888;padding:8px;text-align:center">Belum ada rombongan. Tambah di form di atas.</p>';
+    return;
+  }
+  c.innerHTML = groups.map(g => {
+    const gid       = String(g.group_id || '').trim();
+    const stats     = SHEET_GROUP_STATS[gid] || { hadir: 0, titipan: 0, total: 0 };
+    const quota     = Number(g.quota) || 0;
+    const filled    = quota > 0 ? Math.min(100, Math.round(stats.total / quota * 100)) : 0;
+    const fillCls   = filled >= 100 ? 'is-full' : filled >= 80 ? 'is-warning' : '';
+    const allowT    = g.allow_titipan === true || String(g.allow_titipan).toLowerCase() === 'true';
+    const titipanBadge = allowT
+      ? '<span class="group-titipan-badge is-on">+ TITIPAN OK (max ' + (Number(g.max_titipan_per_scan) || 1) + ')</span>'
+      : '<span class="group-titipan-badge is-off">TIDAK ADA TITIPAN</span>';
+    const sessionLbl = (CONFIG.sessionLabels && CONFIG.sessionLabels[g.session]) || g.session || '-';
+    return `
+      <div class="group-item">
+        <div class="group-item-head">
+          <div style="min-width:0;flex:1">
+            <div class="group-item-name">${escapeHtml(g.group_name || gid)}${titipanBadge}</div>
+            <code class="group-item-id">${escapeHtml(gid)}</code>
+          </div>
+        </div>
+        <div class="group-item-meta">
+          <strong>Sesi:</strong> ${escapeHtml(sessionLbl)} •
+          <strong>Kuota:</strong> ${quota || '∞'} •
+          <strong>Hadir:</strong> ${stats.hadir} •
+          <strong>Titipan:</strong> ${stats.titipan}
+        </div>
+        ${quota > 0 ? `
+          <div class="group-progress-bar">
+            <div class="group-progress-fill ${fillCls}" style="width:${filled}%"></div>
+          </div>
+          <div style="font-size:10.5px;color:#888;text-align:right">${stats.total}/${quota} (${filled}%)</div>
+        ` : ''}
+        <div class="group-item-actions">
+          <button class="mini-btn" onclick="generateGroupQR('${escapeAttr(gid)}')" style="background:#b88746;color:#fff">📷 Generate QR</button>
+          <button class="mini-btn" onclick="shareGroupQRWA('${escapeAttr(gid)}')" style="background:#25D366;color:#fff">📱 Share WA</button>
+          <button class="mini-btn" onclick="viewGroupAttendance('${escapeAttr(gid)}')">👥 Detail</button>
+          <button class="mini-btn" onclick="exportGroupCSV('${escapeAttr(gid)}')" style="background:#3a200f;color:#fff">📥 CSV</button>
+          <button class="mini-btn" onclick="editGroup('${escapeAttr(gid)}')">✏️ Edit</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// === GROUP QR generation & download ===
+
+// URL payload untuk Group QR — saat di-scan, scanner page deteksi param "group"
+// dan switch ke mode group (UI input nama + counter quota).
+function getGroupScanUrl(groupId) {
+  const base = location.origin + location.pathname;
+  const key = (CONFIG && CONFIG.scannerKey) || '';
+  return base + '?mode=scan&group=' + encodeURIComponent(groupId) + '&key=' + encodeURIComponent(key);
+}
+
+// Generate QR card (canvas) untuk group → return Promise<canvas>
+async function generateGroupCardCanvas(groupId) {
+  if (typeof qrcode === 'undefined') throw new Error('QR library belum ter-load');
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  if (!grp) throw new Error('Group "' + groupId + '" tidak ditemukan');
+
+  const qrUrl = getGroupScanUrl(groupId);
+  const qr = qrcode(0, 'M');
+  qr.addData(qrUrl);
+  qr.make();
+  const qrDataUrl = qr.createDataURL(10, 0);
+
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+  const eventDate   = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  const sessionLbl  = (CONFIG.sessionLabels && CONFIG.sessionLabels[grp.session]) || grp.session || '';
+  const quota       = Number(grp.quota) || 0;
+  const allowT      = grp.allow_titipan === true || String(grp.allow_titipan).toLowerCase() === 'true';
+
+  const W = 720, H = 1080;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  // Background gradient ivory -> cream
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#faf0d8'); grad.addColorStop(1, '#e8d4a8');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  // Double frame
+  const GOLD = '#b88746';
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 4;  ctx.strokeRect(28, 28, W-56, H-56);
+  ctx.lineWidth = 1;  ctx.strokeRect(40, 40, W-80, H-80);
+  ctx.fillStyle = GOLD;
+  [[28,28],[W-28,28],[28,H-28],[W-28,H-28]].forEach(([x,y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
+  });
+
+  ctx.textAlign = 'center';
+  // Header
+  ctx.font = '600 24px Georgia, serif';
+  ctx.fillStyle = '#6b3d1c';
+  ctx.fillText('Q R   R O M B O N G A N', W/2, 110);
+  // Couple
+  ctx.font = '700 36px "Cinzel", Georgia, serif';
+  ctx.fillStyle = '#3a200f';
+  ctx.fillText(coupleNames, W/2, 165);
+  // Divider
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(W/2 - 50, 185, 100, 2);
+  // Group name (big)
+  ctx.font = '700 30px Georgia, serif';
+  ctx.fillStyle = '#3a200f';
+  wrapText_(ctx, grp.group_name || groupId, W/2, 235, W-160, 36);
+  // Event date
+  ctx.font = '500 18px Georgia, serif';
+  ctx.fillStyle = '#6b3d1c';
+  ctx.fillText(eventDate, W/2, 320);
+  if (sessionLbl) {
+    ctx.font = '600 16px Georgia, serif';
+    ctx.fillText(sessionLbl, W/2, 348);
+  }
+
+  // QR — load image then draw
+  const qrImg = await loadImage_(qrDataUrl);
+  const QS = 420;
+  ctx.drawImage(qrImg, (W - QS) / 2, 385, QS, QS);
+
+  // Footer info
+  let footerY = 840;
+  ctx.font = '500 17px Georgia, serif';
+  ctx.fillStyle = '#3a200f';
+  if (quota > 0) {
+    ctx.fillText('Kuota Rombongan: ' + quota + ' orang', W/2, footerY);
+    footerY += 26;
+  }
+  ctx.font = '500 14px Georgia, serif';
+  ctx.fillStyle = allowT ? '#856404' : '#721c24';
+  ctx.fillText(allowT ? '✓ Titipan diizinkan (max ' + (Number(grp.max_titipan_per_scan) || 1) + ' per tamu)'
+                      : '✕ Tidak ada titipan — hanya yang hadir',
+               W/2, footerY);
+  footerY += 28;
+  ctx.font = 'italic 12px Georgia, serif';
+  ctx.fillStyle = '#888';
+  ctx.fillText('Tunjukkan QR ini ke penerima tamu saat tiba.', W/2, footerY);
+  ctx.fillText('Setiap orang yang hadir akan diinput namanya satu per satu.', W/2, footerY + 18);
+
+  return cv;
+}
+
+// Helper wrap text untuk canvas
+function wrapText_(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text).split(' ');
+  let line = '';
+  const lines = [];
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + ' ';
+    if (ctx.measureText(test).width > maxWidth && line !== '') {
+      lines.push(line.trim());
+      line = words[i] + ' ';
+    } else line = test;
+  }
+  if (line) lines.push(line.trim());
+  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineHeight));
+}
+function loadImage_(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// Generate + download Group QR sebagai PNG
+async function generateGroupQR(groupId) {
+  try {
+    showToast('Membuat QR rombongan…', 'info');
+    const cv = await generateGroupCardCanvas(groupId);
+    const dataUrl = cv.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'qr_rombongan_' + groupId + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('✓ QR rombongan tersimpan. Cetak & bagikan ke PIC rombongan.', 'success');
+  } catch (err) {
+    showToast('✕ Gagal generate: ' + err.message, 'error');
+  }
+}
+
+// Share Group QR link ke WA (link saja, atau pakai Web Share API kalau support)
+async function shareGroupQRWA(groupId) {
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  if (!grp) { showToast('Group tidak ditemukan', 'error'); return; }
+  // Generate canvas → blob, lalu coba Web Share API kalau ada
+  try {
+    const cv = await generateGroupCardCanvas(groupId);
+    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+    const file = new File([blob], 'qr_rombongan_' + groupId + '.png', { type: 'image/png' });
+    const shareText = `*QR Rombongan: ${grp.group_name || groupId}*\n\nPernikahan Cintya & Fathoni\n${(typeof stripHtml === 'function' ? stripHtml(SHEET_CONTENT_MAP['events.akad.date']) : '') || 'Ahad, 21 Juni 2026'}\n\nTunjukkan QR ini ke penerima tamu saat tiba. Setiap orang akan diinput namanya.`;
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: shareText, title: 'QR Rombongan ' + (grp.group_name || groupId) });
+      return;
+    }
+    // Fallback: download + buka WA dengan text saja
+    generateGroupQR(groupId);
+    setTimeout(() => {
+      const wa = `https://wa.me/?text=${encodeURIComponent(shareText + '\n\n(File QR sudah ter-download, lampirkan di chat ini)')}`;
+      window.open(wa, '_blank');
+    }, 800);
+  } catch (err) {
+    showToast('✕ Gagal share: ' + err.message, 'error');
+  }
+}
+
+// === DETAIL MODAL: tampilkan list siapa yang sudah scan per group ===
+async function viewGroupAttendance(groupId) {
+  const baseUrl = CONFIG.GOOGLE_SCRIPT_URL || CONFIG.SHEET_DATA_URL;
+  const overlay = document.getElementById('group-detail-overlay');
+  const title   = document.getElementById('group-detail-title');
+  const stats   = document.getElementById('group-detail-stats');
+  const list    = document.getElementById('group-detail-list');
+  if (!overlay) return;
+
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  title.textContent = 'Detail: ' + (grp ? grp.group_name : groupId);
+  stats.innerHTML = '<em style="color:#888">Memuat dari server…</em>';
+  list.innerHTML = '';
+  overlay.classList.add('show');
+
+  if (!baseUrl) {
+    stats.innerHTML = '<span style="color:#a04040">CONFIG.GOOGLE_SCRIPT_URL kosong.</span>';
+    return;
+  }
+
+  try {
+    const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
+              + '&key=' + encodeURIComponent(CONFIG.scannerKey || '');
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (!json.success) {
+      stats.innerHTML = '<span style="color:#a04040">✕ ' + escapeHtml(json.error || 'Gagal') + '</span>';
+      return;
+    }
+    const g = json.group;
+    const allowT = g.allow_titipan;
+    const overrideCount = (json.attended || []).filter(a => a.is_override).length;
+    stats.innerHTML = `
+      <strong>Sesi:</strong> ${escapeHtml(g.session || '-')}<br>
+      <strong>Kuota:</strong> ${g.quota || '∞'} •
+      <strong>Hadir:</strong> ${json.hadirCount} •
+      <strong>Titipan:</strong> ${json.titipanCount} •
+      <strong>Total:</strong> ${json.totalClaimed}
+      ${overrideCount > 0 ? ` • <span style="color:#7a3325">⚠ Override: ${overrideCount}</span>` : ''}<br>
+      <strong>Titipan policy:</strong> ${allowT ? '✓ Diizinkan (max ' + g.max_titipan_per_scan + ')' : '✕ Tidak diizinkan'}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="mini-btn" onclick="exportGroupCSV('${escapeAttr(groupId)}')" style="background:#3a200f;color:#fff">📥 Download CSV Rombongan</button>
+      </div>
+    `;
+    if (json.attended.length === 0) {
+      list.innerHTML = '<p style="padding:12px;text-align:center;color:#888;font-size:12px">Belum ada yang scan.</p>';
+      return;
+    }
+    list.innerHTML = json.attended.map(a => {
+      const time = a.timestamp ? new Date(a.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+      const isTitipan = a.type === 'titipan';
+      const badge = `<span class="type-badge ${isTitipan ? 'is-titipan' : 'is-hadir'}">${isTitipan ? 'TITIPAN' : 'HADIR'}</span>`;
+      const titipanInfo = isTitipan && a.titipan_untuk ? ` untuk <strong>${escapeHtml(a.titipan_untuk)}</strong>` : '';
+      const overrideInfo = a.is_override ? ' <span style="color:#a04040;font-size:9.5px">⚠ OVERRIDE</span>' : '';
+      return `
+        <div class="group-attended-row">
+          <strong>${escapeHtml(a.name_input || '(tanpa nama)')}</strong>${badge}${titipanInfo}${overrideInfo}
+          <span class="row-meta">${time}${a.received_by ? ' • diterima oleh: ' + escapeHtml(a.received_by) : ''}</span>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    stats.innerHTML = '<span style="color:#a04040">✕ Network error: ' + escapeHtml(err.message) + '</span>';
+  }
+}
+function hideGroupDetail(event) {
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('group-detail-overlay').classList.remove('show');
+}
+
+// Tag group-id field sebagai "user-touched" supaya autoSuggest tidak override input manual
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.id === 'grp-id') e.target.dataset.userTouched = '1';
+}, true);
+
+/* =========================================================
+   AUDIT KEHADIRAN — laporan lengkap di admin panel
+   Sumber: SHEET_ATTENDANCE_LIST (di-populate oleh loadSheetContent)
+   ========================================================= */
+const AUDIT_BATCH_SIZE = 30;
+let AUDIT_RENDERED_COUNT = 0;
+let AUDIT_FILTERED_CACHE = [];
+let AUDIT_SCROLL_HANDLER_BOUND = false;
+
+function classifyAttendanceRow(row) {
+  // Return: 'personal' | 'hadir' | 'titipan'
+  const gid = String(row.group_id || '').trim();
+  if (!gid) return 'personal'; // QR personal (token-based)
+  const t = String(row.type || '').toLowerCase();
+  return t === 'titipan' ? 'titipan' : 'hadir';
+}
+
+function getAttendanceOverallStats() {
+  const list = Array.isArray(SHEET_ATTENDANCE_LIST) ? SHEET_ATTENDANCE_LIST : [];
+  let personal = 0, hadir = 0, titipan = 0, override = 0;
+  list.forEach(row => {
+    const k = classifyAttendanceRow(row);
+    // Personal hanya hitung kalau sudah ada redeemed_at
+    if (k === 'personal') {
+      if (row.redeemed_at) personal++;
+    } else if (k === 'hadir')   { hadir++; }
+    else if (k === 'titipan') { titipan++; }
+    if (row.is_override) override++;
+  });
+  return { personal, hadir, titipan, override, total: personal + hadir + titipan };
+}
+
+function updateAuditOverallStats() {
+  const s = getAttendanceOverallStats();
+  const setNum = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  setNum('audit-stat-personal', s.personal);
+  setNum('audit-stat-group-hadir', s.hadir);
+  setNum('audit-stat-titipan', s.titipan);
+  setNum('audit-stat-override', s.override);
+  setNum('audit-stat-total', s.total);
+}
+
+function populateAuditGroupFilter() {
+  const sel = document.getElementById('audit-filter-group');
+  if (!sel) return;
+  const currentValue = sel.value;
+  const groups = Array.isArray(SHEET_GROUPS_LIST) ? SHEET_GROUPS_LIST : [];
+  // Build options
+  const options = ['<option value="">Semua Rombongan</option>',
+    '<option value="__personal__">— Personal QR only —</option>'];
+  groups.forEach(g => {
+    const gid = String(g.group_id || '').trim();
+    if (!gid) return;
+    options.push(`<option value="${escapeAttr(gid)}">${escapeHtml(g.group_name || gid)}</option>`);
+  });
+  // Tambahkan group_id yang muncul di attendance tapi mungkin sudah dihapus dari Groups tab
+  const knownGids = new Set(groups.map(g => String(g.group_id || '').trim()));
+  const orphanGids = new Set();
+  (SHEET_ATTENDANCE_LIST || []).forEach(row => {
+    const gid = String(row.group_id || '').trim();
+    if (gid && !knownGids.has(gid)) orphanGids.add(gid);
+  });
+  orphanGids.forEach(gid => {
+    options.push(`<option value="${escapeAttr(gid)}">${escapeHtml(gid)} (orphan)</option>`);
+  });
+  sel.innerHTML = options.join('');
+  // Restore selection kalau masih valid
+  if (currentValue && Array.from(sel.options).some(o => o.value === currentValue)) {
+    sel.value = currentValue;
+  }
+}
+
+function filterAttendance() {
+  const list = Array.isArray(SHEET_ATTENDANCE_LIST) ? SHEET_ATTENDANCE_LIST : [];
+  const q = (document.getElementById('audit-search')?.value || '').trim().toLowerCase();
+  const typeF = document.getElementById('audit-filter-type')?.value || '';
+  const groupF = document.getElementById('audit-filter-group')?.value || '';
+  const overrideOnly = document.getElementById('audit-filter-override')?.checked || false;
+
+  return list.filter(row => {
+    // Filter override
+    if (overrideOnly && !row.is_override) return false;
+    // Filter type
+    const cls = classifyAttendanceRow(row);
+    if (typeF) {
+      if (typeF === 'personal' && cls !== 'personal') return false;
+      if (typeF === 'hadir' && cls !== 'hadir')   return false;
+      if (typeF === 'titipan' && cls !== 'titipan') return false;
+    }
+    // Filter group
+    if (groupF === '__personal__') {
+      if (cls !== 'personal') return false;
+    } else if (groupF) {
+      if (String(row.group_id || '').trim() !== groupF) return false;
+    }
+    // Search (nama tamu, titipan_untuk, name_input, received_by, token)
+    if (q) {
+      const haystack = [
+        row.name, row.name_input, row.titipan_untuk,
+        row.received_by, row.token, row.group_id, row.session
+      ].join(' ').toLowerCase();
+      if (haystack.indexOf(q) === -1) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    // Sort: newest first (by redeemed_at, fallback registered_at)
+    const ta = new Date(a.redeemed_at || a.registered_at || 0).getTime() || 0;
+    const tb = new Date(b.redeemed_at || b.registered_at || 0).getTime() || 0;
+    return tb - ta;
+  });
+}
+
+function renderAuditRow(row) {
+  const cls = classifyAttendanceRow(row);
+  const time = row.redeemed_at ? new Date(row.redeemed_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+  const groups = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === String(row.group_id || '').trim());
+  const groupLabel = groups ? (groups.group_name || groups.group_id) : (row.group_id || '');
+
+  let nameDisplay = '';
+  let badges = '';
+  let meta = '';
+
+  if (cls === 'personal') {
+    nameDisplay = escapeHtml(row.name || '(tanpa nama)');
+    badges = '<span class="row-badge is-personal">PERSONAL</span>';
+    meta = `<span class="row-meta">Token: <strong>${escapeHtml(row.token || '-')}</strong> • Sesi: ${escapeHtml(row.session || '-')}</span>`;
+  } else if (cls === 'hadir') {
+    nameDisplay = escapeHtml(row.name_input || '(tanpa nama)');
+    badges = '<span class="row-badge is-hadir">HADIR</span>';
+    if (row.is_override) badges += '<span class="row-badge is-override">⚠ OVERRIDE</span>';
+    meta = `<span class="row-meta">Rombongan: <strong>${escapeHtml(groupLabel)}</strong></span>`;
+  } else if (cls === 'titipan') {
+    nameDisplay = `${escapeHtml(row.name_input || '?')} <span style="color:#888">→</span> <strong style="color:#856404">${escapeHtml(row.titipan_untuk || '?')}</strong>`;
+    badges = '<span class="row-badge is-titipan">TITIPAN</span>';
+    if (row.is_override) badges += '<span class="row-badge is-override">⚠ OVERRIDE</span>';
+    meta = `<span class="row-meta">Rombongan: <strong>${escapeHtml(groupLabel)}</strong></span>`;
+  }
+
+  const timeReceiver = `<span class="row-meta">${escapeHtml(time)}${row.received_by ? ' • diterima oleh: <strong>' + escapeHtml(row.received_by) + '</strong>' : ' • <em>tanpa penerima</em>'}</span>`;
+
+  return `
+    <div class="audit-row ${row.is_override ? 'is-override-row' : ''}">
+      <span class="row-name">${nameDisplay}</span>${badges}
+      ${meta}
+      ${timeReceiver}
+    </div>
+  `;
+}
+
+function attachAuditScrollLoader() {
+  if (AUDIT_SCROLL_HANDLER_BOUND) return;
+  const container = document.getElementById('audit-list-container');
+  if (!container) return;
+  AUDIT_SCROLL_HANDLER_BOUND = true;
+  container.addEventListener('scroll', () => {
+    if (AUDIT_RENDERED_COUNT >= AUDIT_FILTERED_CACHE.length) return;
+    const dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (dist <= 80) appendNextAuditBatch();
+  }, { passive: true });
+}
+
+function appendNextAuditBatch() {
+  const container = document.getElementById('audit-list-container');
+  if (!container) return;
+  const next = AUDIT_FILTERED_CACHE.slice(AUDIT_RENDERED_COUNT, AUDIT_RENDERED_COUNT + AUDIT_BATCH_SIZE);
+  if (next.length === 0) return;
+  const oldSentinel = container.querySelector('.audit-load-sentinel');
+  if (oldSentinel) oldSentinel.remove();
+  container.insertAdjacentHTML('beforeend', next.map(renderAuditRow).join(''));
+  AUDIT_RENDERED_COUNT += next.length;
+  if (AUDIT_RENDERED_COUNT < AUDIT_FILTERED_CACHE.length) {
+    container.insertAdjacentHTML('beforeend',
+      `<div class="audit-load-sentinel">Scroll untuk muat lainnya — ${AUDIT_RENDERED_COUNT}/${AUDIT_FILTERED_CACHE.length}</div>`);
+  } else {
+    container.insertAdjacentHTML('beforeend',
+      `<div class="audit-load-sentinel">— Semua ditampilkan (${AUDIT_FILTERED_CACHE.length}) —</div>`);
+  }
+}
+
+function renderAttendanceAudit() {
+  updateAuditOverallStats();
+  populateAuditGroupFilter();
+  const container = document.getElementById('audit-list-container');
+  const metaEl = document.getElementById('audit-result-meta');
+  if (!container) return;
+  AUDIT_FILTERED_CACHE = filterAttendance();
+  AUDIT_RENDERED_COUNT = 0;
+  if (metaEl) {
+    const total = (SHEET_ATTENDANCE_LIST || []).length;
+    metaEl.textContent = `Menampilkan ${AUDIT_FILTERED_CACHE.length} dari ${total} entri attendance.`;
+  }
+  if (AUDIT_FILTERED_CACHE.length === 0) {
+    container.innerHTML = '<p style="font-size:11px;color:#888;padding:16px;text-align:center">Tidak ada data yang cocok dengan filter.</p>';
+    return;
+  }
+  container.innerHTML = '';
+  container.scrollTop = 0;
+  appendNextAuditBatch();
+  attachAuditScrollLoader();
+}
+
+/* === EXPORT CSV LENGKAP === */
+function buildAttendanceCSV(rows) {
+  const headers = ['Timestamp', 'Tipe', 'Group ID', 'Nama Rombongan', 'Sesi',
+                   'Nama Tamu (Input)', 'Titipan Untuk', 'Token Personal', 'Nama (Personal)',
+                   'Diterima Oleh', 'Override?', 'Registered At', 'Redeemed At'];
+  const groupMap = {};
+  (SHEET_GROUPS_LIST || []).forEach(g => {
+    const gid = String(g.group_id || '').trim();
+    if (gid) groupMap[gid] = g.group_name || gid;
+  });
+  const dataRows = rows.map(r => {
+    const cls = classifyAttendanceRow(r);
+    const time = r.redeemed_at ? new Date(r.redeemed_at).toLocaleString('id-ID') : '';
+    const groupName = r.group_id ? (groupMap[String(r.group_id).trim()] || r.group_id) : '';
+    return [
+      time,
+      cls.toUpperCase(),
+      r.group_id || '',
+      groupName,
+      r.session || '',
+      r.name_input || '',
+      r.titipan_untuk || '',
+      r.token || '',
+      r.name || '',
+      r.received_by || '',
+      r.is_override ? 'YA' : '',
+      r.registered_at ? new Date(r.registered_at).toLocaleString('id-ID') : '',
+      r.redeemed_at ? new Date(r.redeemed_at).toLocaleString('id-ID') : ''
+    ];
+  });
+  return [headers, ...dataRows].map(row =>
+    row.map(cell => `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+}
+
+function downloadCSV(filename, csv) {
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAttendanceCSV() {
+  const rows = SHEET_ATTENDANCE_LIST || [];
+  if (rows.length === 0) { showToast('Belum ada data attendance untuk diekspor', 'error'); return; }
+  const csv = buildAttendanceCSV(rows);
+  downloadCSV(`Attendance_Lengkap_${new Date().toISOString().split('T')[0]}.csv`, csv);
+  showToast(`✓ CSV ${rows.length} entri ter-download`, 'success');
+}
+
+function exportFilteredAttendanceCSV() {
+  const rows = AUDIT_FILTERED_CACHE || [];
+  if (rows.length === 0) {
+    showToast('Tidak ada data hasil filter untuk diekspor', 'error');
+    return;
+  }
+  const csv = buildAttendanceCSV(rows);
+  // Suffix nama file berdasarkan filter aktif
+  const typeF  = document.getElementById('audit-filter-type')?.value || 'all';
+  const groupF = document.getElementById('audit-filter-group')?.value || 'all';
+  const suffix = [typeF, groupF].filter(x => x && x !== 'all').join('_').replace(/[^a-z0-9_]/gi, '') || 'filter';
+  downloadCSV(`Attendance_${suffix}_${new Date().toISOString().split('T')[0]}.csv`, csv);
+  showToast(`✓ CSV hasil filter (${rows.length} entri) ter-download`, 'success');
+}
+
+function exportGroupCSV(groupId) {
+  const rows = (SHEET_ATTENDANCE_LIST || []).filter(r => String(r.group_id || '').trim() === groupId);
+  if (rows.length === 0) {
+    showToast('Belum ada data scan untuk rombongan ini', 'error');
+    return;
+  }
+  const csv = buildAttendanceCSV(rows);
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  const filename = `Rombongan_${(grp && grp.group_name ? grp.group_name : groupId).replace(/\s+/g,'_').replace(/[^a-z0-9_-]/gi,'')}_${new Date().toISOString().split('T')[0]}.csv`;
+  downloadCSV(filename, csv);
+  showToast(`✓ CSV ${rows.length} entri ter-download`, 'success');
 }
 
 /* ===== TEST KONEK SCANNER — diagnostic untuk debug Apps Script ===== */
