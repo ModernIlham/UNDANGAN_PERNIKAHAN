@@ -2253,6 +2253,30 @@ body.scanner-mode > #scanner-page {
 }
 .scanner-hardblock-banner .icon { font-size: 36px; line-height: 1; margin-bottom: 6px; }
 
+/* Banner sukses "baru ditambahkan" — muncul setelah submit berhasil */
+.scanner-success-recent {
+  background: linear-gradient(135deg, #d4edda, #b8e0c2);
+  border: 2px solid #2d6a32;
+  color: #155724;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 8px 0 12px;
+  text-align: center;
+  animation: successPulse 0.6s ease-out;
+  box-shadow: 0 4px 12px rgba(45, 106, 50, 0.25);
+}
+.scanner-success-recent strong {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #0d3d1d;
+}
+@keyframes successPulse {
+  0%   { transform: scale(0.95); opacity: 0; }
+  50%  { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .scan-reset-btn {
   width: 100%;
   padding: 12px;
@@ -6032,6 +6056,7 @@ img[src$="loading.svg"] {
      }
      sh.appendRow([new Date(), data.invitedTo||'', data.name||'',
        data.attendance||'', data.guests||'', data.session||'', data.message||'']);
+     SpreadsheetApp.flush();
      return ContentService.createTextOutput(JSON.stringify({ok:true}))
        .setMimeType(ContentService.MimeType.JSON);
    }
@@ -6063,6 +6088,7 @@ img[src$="loading.svg"] {
          }
          const now = new Date();
          sh.getRange(i + 1, 5).setValue(now);
+         SpreadsheetApp.flush(); // commit segera supaya fetch berikutnya pasti baca data baru
          return ContentService.createTextOutput(JSON.stringify({
            success: true, alreadyRedeemed: false,
            name: data[i][1] || name || '',
@@ -6073,6 +6099,7 @@ img[src$="loading.svg"] {
      // Token belum terdaftar -> auto-register sekaligus mark redeemed
      const now = new Date();
      sh.appendRow([token, name || '', '', now, now]);
+     SpreadsheetApp.flush();
      return ContentService.createTextOutput(JSON.stringify({
        success: true, alreadyRedeemed: false,
        name: name || '', timestamp: now.toISOString()
@@ -6101,6 +6128,7 @@ img[src$="loading.svg"] {
        }
      }
      sh.appendRow([token, name || '', session || '', new Date(), '']);
+     SpreadsheetApp.flush();
      return ContentService.createTextOutput(JSON.stringify({
        success: true, registered: true
      })).setMimeType(ContentService.MimeType.JSON);
@@ -6281,6 +6309,7 @@ img[src$="loading.svg"] {
        }
      });
      sh.appendRow(row);
+     SpreadsheetApp.flush(); // commit ke storage SEBELUM return supaya fetch berikutnya pasti baca data baru
      return jsonOut_({
        success: true,
        slot: {
@@ -6325,6 +6354,7 @@ img[src$="loading.svg"] {
            }
          });
          sh.getRange(i + 1, 1, 1, GROUPS_COLS.length).setValues([updated]);
+         SpreadsheetApp.flush();
          return jsonOut_({ success: true, updated: true, group_id: p.group_id });
        }
      }
@@ -6344,6 +6374,7 @@ img[src$="loading.svg"] {
        }
      });
      sh.appendRow(row);
+     SpreadsheetApp.flush();
      return jsonOut_({ success: true, created: true, group_id: p.group_id });
    }
 
@@ -6578,7 +6609,9 @@ let SHEET_ATTENDANCE_LIST = [];
 async function loadSheetContent() {
   if (!CONFIG.SHEET_DATA_URL) return;
   try {
-    const res = await fetch(CONFIG.SHEET_DATA_URL, { cache: 'no-store' });
+    // Cache-buster _t=timestamp supaya Google edge CDN tidak return data lama
+    const cacheBust = (CONFIG.SHEET_DATA_URL.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now();
+    const res = await fetch(CONFIG.SHEET_DATA_URL + cacheBust, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     SHEET_CONTENT_MAP = data.content || {};
@@ -8797,6 +8830,8 @@ function updateReceiverBar() {
    ========================================================= */
 let _currentGroupId = null;
 let _currentGroupInfo = null;
+// Info submission terakhir (dipakai untuk render banner "✓ baru ditambahkan" di panel)
+let _lastGroupSubmission = null;
 
 async function handleGroupScanned(groupId) {
   _currentGroupId = groupId;
@@ -8808,7 +8843,8 @@ async function handleGroupScanned(groupId) {
   }
   try {
     const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
-              + '&key=' + encodeURIComponent(_scannerActiveKey || '');
+              + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+              + '&_t=' + Date.now();
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       showScanResult('error', `<strong>✗ HTTP ${res.status}</strong>`);
@@ -8835,6 +8871,20 @@ function renderGroupScanPanel(info) {
   const quota   = g.quota || 0;
   const filled  = quota > 0 ? Math.round(total / quota * 100) : 0;
   const fillCls = filled >= 100 ? 'is-full' : filled >= 80 ? 'is-warning' : '';
+
+  // Banner sukses "baru ditambahkan" — muncul kalau ada submission terakhir < 15 detik lalu di group ini
+  let recentBanner = '';
+  if (_lastGroupSubmission && _lastGroupSubmission.groupId === g.group_id
+      && (Date.now() - _lastGroupSubmission.timestamp) < 15000) {
+    const ls = _lastGroupSubmission;
+    recentBanner = `
+      <div class="scanner-success-recent">
+        <strong>✓ BARU SAJA DICATAT</strong><br>
+        <span style="font-size:14px">${escapeHtml(ls.name)}${ls.titipanFor ? ' + titipan untuk <strong>' + escapeHtml(ls.titipanFor) + '</strong>' : ''}</span><br>
+        <em style="font-size:11px">Berikan ${ls.souvenirCount} souvenir</em>
+      </div>
+    `;
+  }
 
   // Render badge list semua nama yang sudah scan (paling baru di kiri)
   const attendedHtml = info.attended.length === 0
@@ -8863,12 +8913,19 @@ function renderGroupScanPanel(info) {
     <div class="scanner-group-panel">
       <h3>${escapeHtml(g.group_name || g.group_id)}</h3>
       <div class="group-sub">ID: ${escapeHtml(g.group_id)} · Sesi: ${escapeHtml(g.session || '-')}</div>
+      ${recentBanner}
       <div class="scanner-group-counter">
         <div class="stat ${fillCls}"><div class="num">${total}${quota ? '/'+quota : ''}</div><div class="lbl">Total Klaim</div></div>
         <div class="stat"><div class="num">${info.hadirCount}</div><div class="lbl">Hadir Sendiri</div></div>
         <div class="stat"><div class="num">${info.titipanCount}</div><div class="lbl">Titipan</div></div>
       </div>
-      <div class="scanner-attended-summary"><strong>Sudah scan:</strong><br>${attendedHtml}</div>
+      <div class="scanner-attended-summary">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <strong>Sudah scan (${info.attended.length}):</strong>
+          <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}')" style="background:#b88746;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px">⟳ Refresh</button>
+        </div>
+        ${attendedHtml}
+      </div>
 
       <form class="scanner-group-form" onsubmit="submitGroupSlot(event); return false;">
         <input type="text" id="grp-scan-name" placeholder="Nama tamu yang datang sekarang…" autocomplete="off" required>
@@ -8955,8 +9012,10 @@ async function submitGroupSlot(e, overrideFlag) {
       return;
     }
     // === 2) Submit titipan (kalau ada) — selalu type=titipan, tidak butuh override ===
+    let titipanResult = null;
     if (bringT && titipFor) {
       const r2 = await callRedeemGroupSlot(baseUrl, groupId, nameInput, 'titipan', titipFor, receivedBy, false);
+      titipanResult = r2;
       if (!r2.success) {
         if (r2.hardBlock) {
           // Hadir sudah masuk, tapi titipan ditolak — kasih notif jelas
@@ -8970,7 +9029,17 @@ async function submitGroupSlot(e, overrideFlag) {
     } else {
       showToast(`✓ "${nameInput}" tercatat. Berikan 1 souvenir.`, 'success');
     }
+    // Simpan info submission terakhir untuk ditampilkan sebagai banner hijau di panel
+    _lastGroupSubmission = {
+      groupId: groupId,
+      name: nameInput,
+      titipanFor: (titipanResult && titipanResult.success) ? titipFor : '',
+      souvenirCount: (titipanResult && titipanResult.success) ? 2 : 1,
+      timestamp: Date.now()
+    };
     // === 3) Refresh info group → panel muncul ulang dengan data terbaru ===
+    // Tunggu sebentar supaya Apps Script flush() benar-benar committed di edge
+    await new Promise(r => setTimeout(r, 400));
     await handleGroupScanned(groupId);
   } catch (err) {
     showToast('✕ Network: ' + err.message, 'error');
@@ -8987,7 +9056,8 @@ async function callRedeemGroupSlot(baseUrl, group, nameInput, type, titipanFor, 
     + (type === 'titipan' ? '&titipan_untuk=' + encodeURIComponent(titipanFor) : '')
     + '&received_by=' + encodeURIComponent(receivedBy || '')
     + (override ? '&override=true' : '')
-    + '&key=' + encodeURIComponent(_scannerActiveKey || '');
+    + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+    + '&_t=' + Date.now();
   const res = await fetch(url, { cache: 'no-store' });
   return await res.json();
 }
@@ -9051,7 +9121,8 @@ async function handleScannedData(token, name) {
     const url = (CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL) +
       '?action=redeem&token=' + encodeURIComponent(token) +
       '&name=' + encodeURIComponent(name || '') +
-      '&key=' + encodeURIComponent(_scannerActiveKey || '');
+      '&key=' + encodeURIComponent(_scannerActiveKey || '') +
+      '&_t=' + Date.now();
     const res = await fetch(url, { cache: 'no-store' });
 
     // Cek HTTP status
@@ -9276,7 +9347,8 @@ async function saveGroup() {
     + '&max_titipan_per_scan=' + encodeURIComponent(maxTitipan)
     + '&warn_double_claim=' + (warnDouble ? 'true' : 'false')
     + '&notes=' + encodeURIComponent(notes)
-    + '&key=' + encodeURIComponent(CONFIG.scannerKey || '');
+    + '&key=' + encodeURIComponent(CONFIG.scannerKey || '')
+    + '&_t=' + Date.now();
 
   try {
     const res = await fetch(url, { cache: 'no-store' });
@@ -9571,7 +9643,8 @@ async function viewGroupAttendance(groupId) {
 
   try {
     const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
-              + '&key=' + encodeURIComponent(CONFIG.scannerKey || '');
+              + '&key=' + encodeURIComponent(CONFIG.scannerKey || '')
+              + '&_t=' + Date.now();
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     if (!json.success) {
@@ -9922,7 +9995,8 @@ async function testScannerEndpoint() {
   const fullUrl = baseUrl +
     '?action=redeem&token=' + encodeURIComponent(testToken) +
     '&name=' + encodeURIComponent(testName) +
-    '&key=' + encodeURIComponent(key);
+    '&key=' + encodeURIComponent(key) +
+    '&_t=' + Date.now();
 
   setOut('<div style="color:#1a4d2e;font-size:12px;background:#fff;padding:8px;border-radius:4px">' +
     '<em>⏳ Memanggil server...</em><br><br>' +
