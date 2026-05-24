@@ -8020,28 +8020,37 @@ function openGroupPrintWindow(items, mode) {
   const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || 'AHAD, 21 JUNI 2026';
 
   // Expand items: tiap group jadi N kartu (sesuai count). Tiap kartu dapet nomor "X dari Y".
+  const baseUrl = location.origin + location.pathname;
   const cards = [];
   items.forEach(item => {
     const g = item.group;
     const groupId = String(g.group_id || '').trim();
+    // QR 1: Scanner Group QR (untuk penerima tamu — souvenir/attendance)
     const groupQrUrl = (typeof getGroupScanUrl === 'function')
       ? getGroupScanUrl(groupId)
-      : (location.origin + location.pathname + '?mode=scan&group=' + encodeURIComponent(groupId) +
+      : (baseUrl + '?mode=scan&group=' + encodeURIComponent(groupId) +
          '&key=' + encodeURIComponent((CONFIG && CONFIG.scannerKey) || ''));
     const qrSvg = generateQrSvgString(groupQrUrl, 3);
+    // QR 2: Digital Invitation QR (untuk tamu — buka undangan online)
+    const groupName = String(g.group_name || groupId).trim();
+    const session   = String(g.session || 'Sesi 2').trim();
+    const digitalUrl = baseUrl + '?to=' + encodeURIComponent(groupName)
+                     + '&sesi=' + encodeURIComponent(session);
+    const digitalQrSvg = generateQrSvgString(digitalUrl, 3);
     const total = item.count;
     const allowT = g.allow_titipan === true || String(g.allow_titipan).toLowerCase() === 'true';
     const sessionLbl = (CONFIG.sessionLabels && CONFIG.sessionLabels[g.session]) || g.session || '';
     for (let i = 1; i <= total; i++) {
       cards.push({
         group_id: groupId,
-        group_name: g.group_name || groupId,
+        group_name: groupName,
         session: sessionLbl,
         allow_titipan: allowT,
         max_titipan: Number(g.max_titipan_per_scan) || 1,
         memberNum: i,
         memberTotal: total,
-        qrSvg: qrSvg
+        qrSvg: qrSvg,             // group scanner QR (untuk penerima tamu)
+        digitalQrSvg: digitalQrSvg // undangan digital QR (untuk tamu scan)
       });
     }
   });
@@ -8090,8 +8099,9 @@ function openGroupPrintWindow(items, mode) {
   showToast('✓ ' + cards.length + ' kartu rombongan siap cetak. Klik "Cetak" di window baru.', 'success');
 }
 
-// Build HTML untuk 1 kartu rombongan (sama dimensi 52.5×148.5mm seperti personal,
-// tapi konten beda: 1 QR group, group name besar, "X dari Y", policy titipan info)
+// Build HTML untuk 1 kartu rombongan (sama dimensi 52.5×148.5mm seperti personal).
+// SEKARANG 2 QR: top half = undangan digital QR (scan -> buka undangan online),
+//               bottom half = group scanner QR (untuk penerima tamu -> souvenir).
 function buildGroupPrintCardHtml(c, coupleNames, eventDate) {
   const escGroup = escapeHtml(c.group_name);
   const escCouple = escapeHtml(coupleNames);
@@ -8108,35 +8118,39 @@ function buildGroupPrintCardHtml(c, coupleNames, eventDate) {
     '<span class="card-corner corner-bl"></span>' +
     '<span class="card-corner corner-br"></span>' +
     '<div class="card-half card-top">' +
-      '<p class="card-tagline">UNDANGAN ROMBONGAN</p>' +
+      '<p class="card-tagline">UNDANGAN DIGITAL</p>' +
       '<p class="card-couple">' + escCouple + '</p>' +
       '<p class="card-date">' + escDate + '</p>' +
-      (escSession ? '<p class="card-session-grp">' + escSession + '</p>' : '') +
+      '<div class="card-qr-frame">' + c.digitalQrSvg + '</div>' +
       '<p class="card-group-name">' + escGroup + '</p>' +
-      '<p class="card-hint">Tunjukkan kartu ini saat tiba<br>untuk pengambilan souvenir</p>' +
+      '<p class="card-hint">Scan QR ini untuk buka undangan</p>' +
     '</div>' +
     '<div class="fold-line"></div>' +
     '<div class="card-half card-bottom">' +
       '<p class="card-tagline">E-TIKET ROMBONGAN</p>' +
       '<p class="card-couple">' + escCouple + '</p>' +
       '<div class="card-qr-frame card-qr-frame-big">' + c.qrSvg + '</div>' +
-      '<p class="card-group-id">' + escGid + '</p>' +
+      (escSession ? '<p class="card-session-grp">' + escSession + '</p>' : '') +
       '<p class="card-titipan-info">' + escapeHtml(titipanInfo) + '</p>' +
       '<p class="card-member-num">Kartu ' + c.memberNum + ' dari ' + c.memberTotal + '</p>' +
     '</div>' +
   '</div>';
 }
 
-// CSS tambahan khusus group card (di-append ke output buildPrintCss)
+// CSS tambahan khusus group card (di-append ke output buildPrintCss).
+// Layout 2 QR: top = undangan digital (22mm), bottom = group scanner (24mm).
 function buildGroupPrintExtraCss() {
   return (
-    /* Group-specific overrides: 1 QR lebih besar, group name lebih dominan */
-    '.physical-card-group .card-group-name { font-family: "Cinzel", Georgia, serif; font-size: 8.5pt; letter-spacing: 0.8pt; color: #3a200f; margin: 1.2mm 0 0; font-weight: 700; line-height: 1.2; max-width: 100%; padding: 0 0.5mm; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-align: center; text-transform: uppercase; }' +
+    /* Top half: QR digital lebih kecil (22mm) + group name yg lebih ringkas */
+    '.physical-card-group .card-top .card-qr-frame svg { width: 22mm !important; height: 22mm !important; }' +
+    '.physical-card-group .card-top .card-qr-frame { margin: 0.4mm 0 !important; }' +
+    '.physical-card-group .card-group-name { font-family: "Cinzel", Georgia, serif; font-size: 6.5pt; letter-spacing: 0.6pt; color: #3a200f; margin: 0.5mm 0 0; font-weight: 700; line-height: 1.15; max-width: 100%; padding: 0 0.5mm; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-align: center; text-transform: uppercase; }' +
+    /* Bottom half: QR group scanner 24mm (sedikit lebih besar, ini yg dipakai penerima tamu) */
+    '.physical-card-group .card-qr-frame-big svg { width: 24mm !important; height: 24mm !important; }' +
+    '.physical-card-group .card-qr-frame-big { margin: 0.4mm 0 !important; }' +
     '.physical-card-group .card-session-grp { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5pt; color: #6b3d1c; margin: 0.4mm 0 0; font-style: italic; }' +
-    '.physical-card-group .card-qr-frame-big svg { width: 32mm !important; height: 32mm !important; }' +
-    '.physical-card-group .card-group-id { font-family: "Courier New", monospace; font-size: 5pt; color: #6b3d1c; margin: 0.5mm 0 0; letter-spacing: 0.5pt; font-weight: 700; word-break: break-all; max-width: 100%; padding: 0 1mm; }' +
-    '.physical-card-group .card-titipan-info { font-family: "Cormorant Garamond", Georgia, serif; font-size: 4.8pt; color: #856404; margin: 0.5mm 0 0; font-style: italic; font-weight: 600; }' +
-    '.physical-card-group .card-member-num { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; color: #8a5a2e; margin: 0.6mm 0 0; letter-spacing: 0.8pt; font-weight: 600; opacity: 0.85; }'
+    '.physical-card-group .card-titipan-info { font-family: "Cormorant Garamond", Georgia, serif; font-size: 4.8pt; color: #856404; margin: 0.3mm 0 0; font-style: italic; font-weight: 600; }' +
+    '.physical-card-group .card-member-num { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; color: #8a5a2e; margin: 0.4mm 0 0; letter-spacing: 0.8pt; font-weight: 600; opacity: 0.85; }'
   );
 }
 
@@ -9441,8 +9455,9 @@ function renderGroupsList() {
           <div style="font-size:10.5px;color:#888;text-align:right">${stats.total}/${quota} (${filled}%)</div>
         ` : ''}
         <div class="group-item-actions">
+          <button class="mini-btn" onclick="shareGroupInvitationWA('${escapeAttr(gid)}')" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff">📨 Kirim Undangan WA</button>
           <button class="mini-btn" onclick="generateGroupQR('${escapeAttr(gid)}')" style="background:#b88746;color:#fff">📷 Generate QR</button>
-          <button class="mini-btn" onclick="shareGroupQRWA('${escapeAttr(gid)}')" style="background:#25D366;color:#fff">📱 Share WA</button>
+          <button class="mini-btn" onclick="shareGroupQRWA('${escapeAttr(gid)}')" style="background:#25D366;color:#fff">📱 Share QR WA</button>
           <button class="mini-btn" onclick="printGroupCards('${escapeAttr(gid)}')" style="background:#6b3d1c;color:#fff">🖨 Cetak ${quota || '?'} Kartu</button>
           <button class="mini-btn" onclick="viewGroupAttendance('${escapeAttr(gid)}')">👥 Detail</button>
           <button class="mini-btn" onclick="exportGroupCSV('${escapeAttr(gid)}')" style="background:#3a200f;color:#fff">📥 CSV</button>
@@ -9619,6 +9634,29 @@ async function shareGroupQRWA(groupId) {
   } catch (err) {
     showToast('✕ Gagal share: ' + err.message, 'error');
   }
+}
+
+// === SHARE UNDANGAN DIGITAL via WA (per rombongan) ===
+// Generate link `?to=NamaRombongan&sesi=NamaSesi` + reuse buildWAMessage template
+// supaya pesan WA konsisten dengan format kirim per personal tamu.
+function shareGroupInvitationWA(groupId) {
+  const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
+  if (!grp) { showToast('Group tidak ditemukan', 'error'); return; }
+  const groupName = String(grp.group_name || groupId).trim();
+  const session   = String(grp.session || 'Sesi 2').trim();
+  const baseUrl   = location.origin + location.pathname;
+  const link      = `${baseUrl}?to=${encodeURIComponent(groupName)}&sesi=${encodeURIComponent(session)}`;
+  // Reuse template WA personal (sudah tested, format konsisten)
+  const msg = typeof buildWAMessage === 'function'
+    ? buildWAMessage(groupName, link, session)
+    : `Undangan pernikahan Cintya & Fathoni untuk *${groupName}*:\n\n${link}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  const w = window.open(waUrl, '_blank');
+  if (!w) {
+    showToast('Popup diblokir browser. Izinkan popup untuk site ini.', 'error');
+    return;
+  }
+  showToast(`✓ WhatsApp dibuka — pilih kontak utk kirim undangan ke "${groupName}"`, 'success');
 }
 
 // === DETAIL MODAL: tampilkan list siapa yang sudah scan per group ===
