@@ -9220,6 +9220,98 @@ async function handleGroupScanned(groupId, opts) {
   }
 }
 
+// === SYNC button — fetch fresh dari server + tampilkan diagnostic perbandingan ===
+async function syncGroupFromServer(groupId) {
+  const resultEl = document.getElementById('grp-sync-result');
+  if (resultEl) resultEl.innerHTML = '<em style="color:#888">⏳ Cek ke server…</em>';
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) {
+    if (resultEl) resultEl.innerHTML = '<span style="color:#a04040">✗ URL Apps Script belum diset</span>';
+    return;
+  }
+  const cached = getGroupCacheEntry(groupId);
+  const cacheCount = cached ? cached.totalClaimed : 0;
+  try {
+    const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
+              + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+              + '&_t=' + Date.now();
+    const t0 = Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const elapsed = Date.now() - t0;
+    const json = await res.json();
+    if (!json.success) {
+      if (resultEl) resultEl.innerHTML = `<span style="color:#a04040">✗ Server: ${escapeHtml(json.error || 'gagal')}</span>`;
+      return;
+    }
+    const serverCount = json.totalClaimed || 0;
+    // Update panel dengan data terbaru (akan auto-merge via handleGroupScanned)
+    const merged = mergeWithCache(groupId, json);
+    _currentGroupInfo = merged;
+    saveGroupCacheEntry(groupId, merged);
+    renderGroupScanPanel(merged);
+    // Diagnostic info
+    setTimeout(() => {
+      const el = document.getElementById('grp-sync-result');
+      if (!el) return;
+      if (serverCount === cacheCount && cacheCount === merged.totalClaimed) {
+        el.innerHTML = `<span style="color:#2d6a32">✓ Sinkron — Server: ${serverCount}, Cache: ${cacheCount} (${elapsed}ms)</span>`;
+      } else if (serverCount < cacheCount) {
+        el.innerHTML = `<span style="color:#856404">⏱ Server tertunda — Server: ${serverCount}, Cache: ${cacheCount} → Tampil: ${merged.totalClaimed} (${elapsed}ms)<br><em>Kemungkinan: Apps Script belum redeploy dgn SpreadsheetApp.flush(), atau Sheets read-after-write delay 3-15 detik.</em></span>`;
+      } else {
+        el.innerHTML = `<span style="color:#2d6a32">✓ Server lebih baru — Server: ${serverCount}, Cache: ${cacheCount} → Tampil: ${merged.totalClaimed} (${elapsed}ms)</span>`;
+      }
+    }, 100);
+  } catch (err) {
+    if (resultEl) resultEl.innerHTML = `<span style="color:#a04040">✗ Network: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
+// === TEST button — diagnostic: tampilkan raw response server (debug Apps Script) ===
+async function testGroupEndpoint(groupId) {
+  const resultEl = document.getElementById('grp-sync-result');
+  if (!resultEl) return;
+  resultEl.innerHTML = '<em style="color:#888">⏳ Memanggil server…</em>';
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) {
+    resultEl.innerHTML = '<span style="color:#a04040">✗ URL Apps Script belum diset</span>';
+    return;
+  }
+  const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
+            + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+            + '&_t=' + Date.now();
+  try {
+    const t0 = Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const elapsed = Date.now() - t0;
+    const txt = await res.text();
+    let json;
+    try { json = JSON.parse(txt); } catch { json = null; }
+    const cached = getGroupCacheEntry(groupId);
+    resultEl.innerHTML = `
+      <div style="background:#fff;border:1px solid #d2a857;border-radius:5px;padding:8px;font-size:10px;color:#3a200f;line-height:1.5;font-family:monospace">
+        <strong style="font-family:'Cinzel',serif">SERVER DIAGNOSTIC (${elapsed}ms)</strong><br>
+        <strong>URL:</strong> <span style="word-break:break-all;color:#6b3d1c">${escapeHtml(url)}</span><br>
+        <strong>HTTP:</strong> ${res.status} ${res.ok ? '✓' : '✗'}<br>
+        ${json ? `
+          <strong>success:</strong> ${json.success}<br>
+          <strong>totalClaimed (server):</strong> <b style="color:#2d6a32;font-size:13px">${json.totalClaimed || 0}</b><br>
+          <strong>hadirCount:</strong> ${json.hadirCount || 0} · <strong>titipanCount:</strong> ${json.titipanCount || 0}<br>
+          <strong>attended.length:</strong> ${(json.attended || []).length}<br>
+          ${cached ? `<strong>cache.totalClaimed:</strong> <b style="color:#856404">${cached.totalClaimed}</b> (age: ${Math.round((Date.now() - cached.timestamp) / 1000)}s)<br>` : '<strong>cache:</strong> kosong<br>'}
+          ${json.error ? `<span style="color:#a04040"><strong>error:</strong> ${escapeHtml(json.error)}</span>` : ''}
+          ${(json.attended || []).length > 0 ? `
+            <details style="margin-top:6px"><summary style="cursor:pointer">Lihat ${json.attended.length} entries</summary>
+              ${json.attended.slice(0, 30).map(a => `• ${escapeHtml(a.name_input || '?')} (${escapeHtml(a.type || 'hadir')}${a.titipan_untuk ? ' → ' + escapeHtml(a.titipan_untuk) : ''})`).join('<br>')}
+            </details>
+          ` : ''}
+        ` : `<strong style="color:#a04040">Response BUKAN JSON valid:</strong><br><span style="white-space:pre-wrap">${escapeHtml(txt.slice(0, 300))}</span>`}
+      </div>
+    `;
+  } catch (err) {
+    resultEl.innerHTML = `<span style="color:#a04040">✗ Network: ${escapeHtml(err.message)}</span>`;
+  }
+}
+
 function renderGroupScanPanel(info) {
   const container = document.getElementById('scanner-group-container');
   if (!container) return;
@@ -9290,11 +9382,12 @@ function renderGroupScanPanel(info) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:4px;flex-wrap:wrap">
           <strong>Sudah scan (${info.attended.length}):</strong>
           <span style="display:flex;gap:4px">
-            <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}')" style="background:#b88746;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px">⟳ Refresh</button>
-            <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}', { forceRefresh: true })" style="background:#3a200f;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px" title="Bypass cache lokal, paksa ambil dari server">⟳⟳ Force</button>
+            <button type="button" onclick="syncGroupFromServer('${escapeAttr(g.group_id)}')" style="background:#b88746;color:#fff;border:none;padding:4px 10px;border-radius:3px;font-size:10.5px;cursor:pointer;letter-spacing:0.5px;font-weight:600" title="Cek ulang dari server & bandingkan dgn cache lokal">⟳ Sync</button>
+            <button type="button" onclick="testGroupEndpoint('${escapeAttr(g.group_id)}')" style="background:#3a200f;color:#fff;border:none;padding:4px 8px;border-radius:3px;font-size:10.5px;cursor:pointer;letter-spacing:0.5px" title="Diagnostic — tampilkan raw response dari server">🔧 Test</button>
           </span>
         </div>
         ${attendedHtml}
+        <div id="grp-sync-result" style="margin-top:6px;font-size:11px"></div>
       </div>
 
       <form class="scanner-group-form" onsubmit="submitGroupSlot(event); return false;">
@@ -9411,10 +9504,50 @@ async function submitGroupSlot(e, overrideFlag) {
     // re-render panel INSTANT tanpa fetch ulang (server sudah commit lewat flush()).
     // Ini jauh lebih cepat & responsif daripada nunggu round-trip kedua.
     applyOptimisticGroupUpdate(r1, titipanResult);
+    // === 4) AUTO-RETRY background: poll server di 3s, 8s, 20s untuk verify
+    // data sudah benar2 ke-commit. Kalau server kurang dari cache, cache akan
+    // tetap menang (merge MAX) sehingga UI tidak mundur.
+    scheduleBackgroundSync(groupId);
   } catch (err) {
     showToast('✕ Network: ' + err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
   }
+}
+
+// Background sync — poll server di interval 3s, 8s, 20s setelah submit.
+// Tujuan: confirm data sudah ke-commit di sheet (handle Google Sheets read-after-write delay).
+// Cache MAX merge tetap aktif — jadi kalau server lambat, counter UI tetap benar.
+let _backgroundSyncTimers = [];
+function scheduleBackgroundSync(groupId) {
+  // Clear pending timers (kalau ada multiple submit cepat)
+  _backgroundSyncTimers.forEach(t => clearTimeout(t));
+  _backgroundSyncTimers = [];
+  [3000, 8000, 20000].forEach(delay => {
+    const t = setTimeout(async () => {
+      // Hanya sync kalau panel masih menampilkan group yg sama
+      if (_currentGroupId !== groupId) return;
+      try {
+        const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+        if (!baseUrl) return;
+        const url = baseUrl + '?action=getGroupInfo&group=' + encodeURIComponent(groupId)
+                  + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+                  + '&_t=' + Date.now();
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success) return;
+        // Merge dgn cache & re-render — silent (no UI loading state)
+        const merged = mergeWithCache(groupId, json);
+        _currentGroupInfo = merged;
+        saveGroupCacheEntry(groupId, merged);
+        // Only re-render kalau angka berubah (hindari unnecessary DOM update)
+        if (document.getElementById('scanner-group-container')?.querySelector('.scanner-group-panel')) {
+          renderGroupScanPanel(merged);
+        }
+      } catch (e) { /* silent fail — cache tetap valid */ }
+    }, delay);
+    _backgroundSyncTimers.push(t);
+  });
 }
 
 // OPTIMISTIC UPDATE — update _currentGroupInfo dari response redeemGroupSlot
