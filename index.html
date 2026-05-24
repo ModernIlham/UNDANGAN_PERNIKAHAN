@@ -6672,6 +6672,9 @@ async function loadSheetContent() {
     if (typeof renderGroupsList === 'function') renderGroupsList();
     if (typeof renderAttendanceAudit === 'function') renderAttendanceAudit();
     if (typeof getGuestFromURL === 'function') getGuestFromURL();
+    // Re-init QR section supaya fallback "to=NamaRombongan tanpa &group=" bisa di-detect
+    // sebagai mode rombongan sekarang SHEET_GROUPS_LIST sudah ter-populate.
+    if (typeof initQrSection === 'function') initQrSection();
   } catch (err) {
     console.warn('[Sheet] gagal load, pakai default:', err);
   }
@@ -8354,49 +8357,95 @@ let _qrCurrentName = '';
 let _qrCurrentToken = '';
 let _qrCurrentSession = '';
 
-// Tampilkan section QR di RSVP kalau URL punya ?to= (tamu spesifik) atau ?group= (rombongan).
-// Mode rombongan dideteksi via ?group=<id> — render label & QR berbeda dari personal.
-function initQrSection() {
+// Helper: deteksi mode undangan dari URL.
+// Return: { mode: 'group'|'personal'|'none', name, groupId, groupName, session }
+// Mode 'group' dideteksi DUA cara:
+//   1) Explicit: URL punya ?group=<id>  (link baru)
+//   2) Fallback: ?to=<nama> cocok dengan SHEET_GROUPS_LIST.group_name (link lama,
+//      sebelum fitur group ditambahkan). Tanpa fallback, link lama akan tetap
+//      tampil sebagai personal walau aslinya rombongan.
+function detectInvitationMode() {
   const params = new URLSearchParams(location.search);
   const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
-  const groupId   = params.get('group') ? decodeURIComponent(params.get('group')) : '';
+  let groupId   = params.get('group') ? decodeURIComponent(params.get('group')) : '';
+  const session = params.get('sesi') || 'Sesi 2';
+  let groupName = '';
+
+  // 1) Explicit group param -> cari nama di SHEET_GROUPS_LIST kalau ada
+  if (groupId && Array.isArray(SHEET_GROUPS_LIST)) {
+    const matched = SHEET_GROUPS_LIST.find(g =>
+      String(g.group_id || '').trim() === groupId.trim()
+    );
+    if (matched) groupName = String(matched.group_name || '').trim() || groupId;
+    else groupName = guestName || groupId;
+  } else if (groupId) {
+    groupName = guestName || groupId;
+  }
+
+  // 2) Fallback: kalau group param tidak ada, cek apakah `to` cocok group_name
+  if (!groupId && guestName && Array.isArray(SHEET_GROUPS_LIST)) {
+    const lowerName = guestName.toLowerCase().trim();
+    const matched = SHEET_GROUPS_LIST.find(g =>
+      String(g.group_name || '').trim().toLowerCase() === lowerName
+    );
+    if (matched) {
+      groupId = String(matched.group_id || '').trim();
+      groupName = String(matched.group_name || '').trim();
+    }
+  }
+
+  return {
+    mode: groupId ? 'group' : (guestName ? 'personal' : 'none'),
+    name: guestName,
+    groupId: groupId,
+    groupName: groupName,
+    session: session
+  };
+}
+
+// Tampilkan section QR di RSVP. Auto-detect personal vs rombongan.
+function initQrSection() {
+  const m = detectInvitationMode();
   const section = document.getElementById('qr-ticket-section');
   if (!section) return;
-  if (guestName || groupId) {
-    section.style.display = '';
-    const sub = document.getElementById('qr-ticket-guest');
-    if (sub) sub.textContent = guestName || groupId;
-    // Mode rombongan -> ubah judul & teks info
-    if (groupId) {
-      const heading = section.querySelector('h3');
-      if (heading) heading.textContent = '— E-TIKET ROMBONGAN —';
-      const desc = section.querySelector('p');
-      if (desc) desc.textContent = 'Tunjukkan QR ini ke penerima tamu saat tiba untuk catat kehadiran & pengambilan souvenir rombongan.';
-      const label = section.querySelector('.qr-ticket-label');
-      if (label) label.textContent = 'LIHAT QR ROMBONGAN';
-    }
-  } else {
+  if (m.mode === 'none') {
     section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  const sub = document.getElementById('qr-ticket-guest');
+  if (sub) sub.textContent = m.groupName || m.name;
+  const heading = section.querySelector('h3');
+  const desc    = section.querySelector('p');
+  const label   = section.querySelector('.qr-ticket-label');
+  if (m.mode === 'group') {
+    if (heading) heading.textContent = '— E-TIKET ROMBONGAN —';
+    if (desc) desc.textContent = 'Tunjukkan QR ini ke penerima tamu saat tiba untuk catat kehadiran & pengambilan souvenir rombongan.';
+    if (label) label.textContent = 'LIHAT QR ROMBONGAN';
+  } else {
+    // Personal mode (default) — kembalikan teks asli kalau sebelumnya pernah diubah
+    if (heading) heading.textContent = '— E-TIKET QR ANDA —';
+    if (desc) desc.textContent = 'Tunjukkan QR ini ke penerima tamu saat tiba untuk mendapatkan souvenir.';
+    if (label) label.textContent = 'LIHAT QR ANDA';
   }
 }
 
 function showQrModal() {
-  const params = new URLSearchParams(location.search);
-  const groupId   = params.get('group') ? decodeURIComponent(params.get('group')) : '';
-  const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
-  // Mode rombongan: tampilkan group QR (sama dgn yg discan penerima tamu)
-  if (groupId) {
-    const session = params.get('sesi') || 'Sesi 2';
-    showGroupQrModal(groupId, guestName, session);
+  const m = detectInvitationMode();
+  if (m.mode === 'group') {
+    showGroupQrModal(m.groupId, m.groupName || m.name, m.session);
     return;
   }
-  if (!guestName) {
+  if (m.mode === 'none') {
     showToast('QR hanya tersedia kalau undangan dibuka via link tamu (URL ada ?to=Nama).', 'error');
     return;
   }
-  const session = params.get('sesi') || 'Sesi 2';
-  showQrModalFor(guestName, tokenForGuest(guestName), session);
+  showQrModalFor(m.name, tokenForGuest(m.name), m.session);
 }
+
+// State global: track mode modal yang sedang terbuka (untuk download routing)
+let _qrModalMode = 'personal'; // 'personal' | 'group'
+let _qrModalGroupId = '';
 
 // Render modal QR untuk MODE ROMBONGAN — QR pointing ke scanner group URL
 // (sama dgn yg di-print di kartu & yg discan penerima tamu).
@@ -8404,8 +8453,16 @@ function showGroupQrModal(groupId, groupName, session) {
   _qrCurrentName = groupName || groupId;
   _qrCurrentToken = ''; // token kosong utk mode rombongan
   _qrCurrentSession = session || '';
+  _qrModalMode = 'group';
+  _qrModalGroupId = groupId;
   const displayName = groupName || groupId;
   const sessLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session]) || session || '';
+
+  // Ubah judul modal jadi "E-TIKET ROMBONGAN"
+  const modalTitle = document.querySelector('#qr-modal-overlay .qr-modal-title');
+  if (modalTitle) modalTitle.textContent = 'E-TIKET ROMBONGAN';
+  const modalHint = document.querySelector('#qr-modal-overlay .qr-modal-hint');
+  if (modalHint) modalHint.textContent = 'Tunjukkan QR ini kepada penerima tamu. Setiap orang dalam rombongan akan diinput namanya satu per satu.';
 
   document.getElementById('qr-modal-name').textContent = displayName;
   // Token field kita pakai utk tampilkan group_id
@@ -8430,6 +8487,14 @@ function showQrModalFor(name, token, session) {
   _qrCurrentName = name;
   _qrCurrentToken = token;
   _qrCurrentSession = session || '';
+  _qrModalMode = 'personal';
+  _qrModalGroupId = '';
+
+  // Reset judul modal ke "E-TIKET KEHADIRAN" (kalau sebelumnya sempat diubah ke rombongan)
+  const modalTitle = document.querySelector('#qr-modal-overlay .qr-modal-title');
+  if (modalTitle) modalTitle.textContent = 'E-TIKET KEHADIRAN';
+  const modalHint = document.querySelector('#qr-modal-overlay .qr-modal-hint');
+  if (modalHint) modalHint.textContent = 'Tunjukkan QR ini kepada penerima tamu untuk mengambil souvenir. Bisa di-screenshot atau di-save.';
 
   document.getElementById('qr-modal-name').textContent = name;
   document.getElementById('qr-modal-token').textContent = token;
@@ -8590,12 +8655,22 @@ function _downloadCanvasAsPng(canvas, filename) {
   document.body.removeChild(a);
 }
 
-// User klik "Simpan Gambar" di modal QR -> download e-tiket card
+// User klik "Simpan Gambar" di modal QR -> download e-tiket card.
+// Route ke canvas yang sesuai: personal pakai generateQrCardCanvas (butuh token),
+// rombongan pakai generateGroupCardCanvas (pakai groupId, tidak butuh token).
 async function downloadQrImage() {
   try {
-    const cv = await generateQrCardCanvas(_qrCurrentName, _qrCurrentToken, _qrCurrentSession);
-    const safeName = String(_qrCurrentName).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    _downloadCanvasAsPng(cv, `e-tiket-${safeName}-${_qrCurrentToken}.png`);
+    let cv, filename;
+    if (_qrModalMode === 'group' && _qrModalGroupId) {
+      cv = await generateGroupCardCanvas(_qrModalGroupId);
+      const safeName = String(_qrModalGroupId).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      filename = `e-tiket-rombongan-${safeName}.png`;
+    } else {
+      cv = await generateQrCardCanvas(_qrCurrentName, _qrCurrentToken, _qrCurrentSession);
+      const safeName = String(_qrCurrentName).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      filename = `e-tiket-${safeName}-${_qrCurrentToken}.png`;
+    }
+    _downloadCanvasAsPng(cv, filename);
     showToast('✓ E-tiket card ter-download — siap di-share / save ke galeri', 'success');
   } catch (e) {
     showToast('Gagal generate gambar: ' + e.message, 'error');
