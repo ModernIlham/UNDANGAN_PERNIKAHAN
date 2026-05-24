@@ -9141,7 +9141,62 @@ function copyScannerUrl() {
 
 function shareScannerUrlWA() {
   const url = getScannerUrl();
-  const msg = `Halo, ini link scanner untuk penerima tamu / petugas souvenir di pernikahan Cintya & Fathoni:\n\n${url}\n\nCara pakai:\n1. Buka link di HP\n2. Izinkan akses kamera\n3. Arahkan ke QR e-tiket tamu yang datang\n4. Sistem otomatis validasi - kalau hijau (VALID), beri souvenir. Kalau kuning (SUDAH DIPAKAI), tolak.\n\nSimpan link ini di favorit HP. Jangan share ke selain staff.`;
+  const msg =
+`Halo! Terima kasih sudah bantu jadi *penerima tamu* di pernikahan *Cintya & Fathoni*. Berikut link scanner Anda:
+
+${url}
+
+━━━━━━━━━━━━━━━━━
+*CARA PAKAI (mohon dibaca dulu)*
+━━━━━━━━━━━━━━━━━
+
+*A. PERSIAPAN AWAL (1x saja)*
+1. Buka link di atas dari HP
+2. Izinkan akses *kamera* saat diminta browser
+3. Ketik *nama Anda* di kotak yang muncul (contoh: "Mas Andi" atau "Bu Sari Booth 1")
+   - Nama ini tercatat di sistem untuk audit setiap scan
+   - Kalau ganti shift / orang, klik tombol *"Ganti"* di bagian atas scanner
+
+*B. SCAN QR TAMU*
+Ada *2 tipe QR* yang mungkin Anda scan:
+
+*1) QR Personal* (1 tamu = 1 QR unik)
+- Arahkan kamera ke QR → sistem auto-validasi
+- *HIJAU (VALID)* → beri 1 souvenir
+- *KUNING (SUDAH DIPAKAI)* → tolak halus, sudah pernah diambil sebelumnya
+- *MERAH (gagal)* → coba scan ulang / cek sinyal internet
+
+*2) QR Rombongan* (1 QR dipakai banyak orang, mis. rekan kantor)
+- Arahkan kamera ke QR → muncul *panel rombongan* dgn info kuota & list nama yg sudah scan
+- Ketik *nama tamu yang datang sekarang* (mis. "Pak Joko") di kolom input
+- Kalau tamu *bawa titipan teman yg tidak datang*, centang "Bawa titipan?" lalu ketik nama yg dititipi
+   _(Catatan: opsi titipan hanya muncul kalau rombongan ini mengizinkan)_
+- Klik *"Konfirmasi & Beri Souvenir"* → counter naik otomatis
+
+*C. PERINGATAN & POLICY*
+
+*⚠ WARNING (kuning, bisa override)*
+Muncul kalau:
+- Nama tamu sudah pernah scan di rombongan ini (mungkin Anda lupa, atau ada nama mirip)
+- Kuota rombongan akan terlampaui
+
+Klik *"Ya, tetap berikan"* HANYA kalau Anda benar2 yakin (mis. memang ada 2 orang nama sama). Setiap override tercatat permanen di sistem untuk audit pengantin.
+
+*🛑 DITOLAK (merah, TIDAK bisa override)*
+Sistem otomatis tolak kalau:
+- Titipan untuk nama yang sudah hadir sendiri
+- Titipan untuk nama yang sudah dititipkan tamu lain
+
+Jangan paksa — ini sengaja, supaya 1 orang tidak dapat 2 souvenir. Kalau tamu protes, arahkan ke koordinator.
+
+━━━━━━━━━━━━━━━━━
+*PENTING — JAGA LINK INI*
+━━━━━━━━━━━━━━━━━
+- *Simpan link* di bookmark / favorit HP
+- *JANGAN forward link* ke selain petugas penerima tamu (siapa saja yg punya link bisa "menggesek" QR sebelum acara → souvenir habis duluan)
+- Kalau ada error atau bingung di lokasi, hubungi admin / pengantin
+
+Terima kasih banyak atas bantuannya 🙏`;
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
