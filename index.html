@@ -5977,6 +5977,27 @@ img[src$="loading.svg"] {
        .map(x => String(x || '').trim().toLowerCase());
      return header.indexOf(String(colName).toLowerCase());
    }
+   // Helper: write row ke sheet BERDASARKAN NAMA KOLOM (bukan posisi).
+   // Robust terhadap reorder/rename kolom — value masuk ke kolom yg header-nya match.
+   // dataObj = { 'group_id': '...', 'name_input': '...', ... }
+   function appendRowByHeader_(sh, dataObj) {
+     ensureAttendanceHeader_(sh);
+     const header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+       .map(x => String(x || '').trim().toLowerCase());
+     const row = header.map(col => {
+       if (dataObj && Object.prototype.hasOwnProperty.call(dataObj, col)) return dataObj[col];
+       return '';
+     });
+     sh.appendRow(row);
+   }
+   // Helper: set value di cell tertentu BY HEADER NAME, di row yg sudah ada.
+   // Lebih aman dari hardcoded column index (mis. setValue(i+1, 5) bisa salah kalau kolom dipindah).
+   function setCellByHeader_(sh, rowIdx, colName, value) {
+     const idx = attendanceColIdx_(sh, colName);
+     if (idx < 0) return false;
+     sh.getRange(rowIdx, idx + 1).setValue(value);
+     return true;
+   }
 
    // ============ GROUPS SHEET (rombongan pakai 1 QR untuk banyak orang) ============
    const GROUPS_COLS = ['group_id','group_name','session','quota','allow_titipan',
@@ -6089,30 +6110,41 @@ img[src$="loading.svg"] {
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      ensureAttendanceHeader_(sh);
+     // Cari kolom token & redeemed_at by header name (robust thd reorder)
+     const tokenIdx    = attendanceColIdx_(sh, 'token');
+     const redeemedIdx = attendanceColIdx_(sh, 'redeemed_at');
+     const nameIdx     = attendanceColIdx_(sh, 'name');
      const data = sh.getDataRange().getValues();
      for (let i = 1; i < data.length; i++) {
-       if (data[i][0] === token) {
-         const redeemedAt = data[i][4];
+       if (tokenIdx >= 0 && data[i][tokenIdx] === token) {
+         const redeemedAt = redeemedIdx >= 0 ? data[i][redeemedIdx] : null;
          if (redeemedAt) {
            return ContentService.createTextOutput(JSON.stringify({
              success: true, alreadyRedeemed: true,
-             name: data[i][1] || name || '',
+             name: (nameIdx >= 0 ? data[i][nameIdx] : '') || name || '',
              timestamp: new Date(redeemedAt).toISOString()
            })).setMimeType(ContentService.MimeType.JSON);
          }
          const now = new Date();
-         sh.getRange(i + 1, 5).setValue(now);
+         // setCellByHeader_ — set redeemed_at by NAMA kolom, bukan hardcoded col 5
+         setCellByHeader_(sh, i + 1, 'redeemed_at', now);
          SpreadsheetApp.flush(); // commit segera supaya fetch berikutnya pasti baca data baru
          return ContentService.createTextOutput(JSON.stringify({
            success: true, alreadyRedeemed: false,
-           name: data[i][1] || name || '',
+           name: (nameIdx >= 0 ? data[i][nameIdx] : '') || name || '',
            timestamp: now.toISOString()
          })).setMimeType(ContentService.MimeType.JSON);
        }
      }
-     // Token belum terdaftar -> auto-register sekaligus mark redeemed
+     // Token belum terdaftar -> auto-register sekaligus mark redeemed (header-based)
      const now = new Date();
-     sh.appendRow([token, name || '', '', now, now]);
+     appendRowByHeader_(sh, {
+       'token': token,
+       'name': name || '',
+       'session': '',
+       'registered_at': now,
+       'redeemed_at': now
+     });
      SpreadsheetApp.flush();
      return ContentService.createTextOutput(JSON.stringify({
        success: true, alreadyRedeemed: false,
@@ -6133,15 +6165,23 @@ img[src$="loading.svg"] {
      const ss = SpreadsheetApp.getActiveSpreadsheet();
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      ensureAttendanceHeader_(sh);
+     const tokenIdx = attendanceColIdx_(sh, 'token');
      const data = sh.getDataRange().getValues();
      for (let i = 1; i < data.length; i++) {
-       if (data[i][0] === token) {
+       if (tokenIdx >= 0 && data[i][tokenIdx] === token) {
          return ContentService.createTextOutput(JSON.stringify({
            success: true, alreadyRegistered: true
          })).setMimeType(ContentService.MimeType.JSON);
        }
      }
-     sh.appendRow([token, name || '', session || '', new Date(), '']);
+     // Header-based append untuk robust thd reorder kolom
+     appendRowByHeader_(sh, {
+       'token': token,
+       'name': name || '',
+       'session': session || '',
+       'registered_at': new Date(),
+       'redeemed_at': ''
+     });
      SpreadsheetApp.flush();
      return ContentService.createTextOutput(JSON.stringify({
        success: true, registered: true
@@ -6305,24 +6345,23 @@ img[src$="loading.svg"] {
      }
 
      // === Semua aman → tulis ke Attendance ===
+     // PAKAI appendRowByHeader_ (bukan appendRow biasa) supaya data masuk ke
+     // kolom yg benar berdasarkan NAMA, bukan posisi. Robust kalau user pernah
+     // edit/reorder kolom di sheet Attendance.
      const now = new Date();
-     const row = ATTENDANCE_COLS.map(col => {
-       switch (col) {
-         case 'token':          return p.group;
-         case 'name':           return grp.group_name || '';
-         case 'session':        return grp.session || '';
-         case 'registered_at':  return now;
-         case 'redeemed_at':    return now;
-         case 'group_id':       return p.group;
-         case 'name_input':     return String(p.name_input || '').trim();
-         case 'type':           return type;
-         case 'titipan_untuk':  return type === 'titipan' ? String(p.titipan_untuk || '').trim() : '';
-         case 'received_by':    return String(p.received_by || '').trim();
-         case 'is_override':    return !!p.override;
-         default:               return '';
-       }
+     appendRowByHeader_(sh, {
+       'token':         p.group,
+       'name':          grp.group_name || '',
+       'session':       grp.session || '',
+       'registered_at': now,
+       'redeemed_at':   now,
+       'group_id':      String(p.group || '').trim(),
+       'name_input':    String(p.name_input || '').trim(),
+       'type':          type,
+       'titipan_untuk': type === 'titipan' ? String(p.titipan_untuk || '').trim() : '',
+       'received_by':   String(p.received_by || '').trim(),
+       'is_override':   !!p.override
      });
-     sh.appendRow(row);
      SpreadsheetApp.flush(); // commit ke storage SEBELUM return supaya fetch berikutnya pasti baca data baru
      return jsonOut_({
        success: true,
