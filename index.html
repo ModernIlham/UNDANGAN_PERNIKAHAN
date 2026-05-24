@@ -8031,11 +8031,12 @@ function openGroupPrintWindow(items, mode) {
       : (baseUrl + '?mode=scan&group=' + encodeURIComponent(groupId) +
          '&key=' + encodeURIComponent((CONFIG && CONFIG.scannerKey) || ''));
     const qrSvg = generateQrSvgString(groupQrUrl, 3);
-    // QR 2: Digital Invitation QR (untuk tamu — buka undangan online)
+    // QR 2: Digital Invitation QR (untuk tamu — buka undangan online dengan marker rombongan)
     const groupName = String(g.group_name || groupId).trim();
     const session   = String(g.session || 'Sesi 2').trim();
     const digitalUrl = baseUrl + '?to=' + encodeURIComponent(groupName)
-                     + '&sesi=' + encodeURIComponent(session);
+                     + '&sesi=' + encodeURIComponent(session)
+                     + '&group=' + encodeURIComponent(groupId);
     const digitalQrSvg = generateQrSvgString(digitalUrl, 3);
     const total = item.count;
     const allowT = g.allow_titipan === true || String(g.allow_titipan).toLowerCase() === 'true';
@@ -8353,16 +8354,27 @@ let _qrCurrentName = '';
 let _qrCurrentToken = '';
 let _qrCurrentSession = '';
 
-// Tampilkan section QR di RSVP kalau URL punya ?to= (tamu spesifik)
+// Tampilkan section QR di RSVP kalau URL punya ?to= (tamu spesifik) atau ?group= (rombongan).
+// Mode rombongan dideteksi via ?group=<id> — render label & QR berbeda dari personal.
 function initQrSection() {
   const params = new URLSearchParams(location.search);
   const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
+  const groupId   = params.get('group') ? decodeURIComponent(params.get('group')) : '';
   const section = document.getElementById('qr-ticket-section');
   if (!section) return;
-  if (guestName) {
+  if (guestName || groupId) {
     section.style.display = '';
     const sub = document.getElementById('qr-ticket-guest');
-    if (sub) sub.textContent = guestName;
+    if (sub) sub.textContent = guestName || groupId;
+    // Mode rombongan -> ubah judul & teks info
+    if (groupId) {
+      const heading = section.querySelector('h3');
+      if (heading) heading.textContent = '— E-TIKET ROMBONGAN —';
+      const desc = section.querySelector('p');
+      if (desc) desc.textContent = 'Tunjukkan QR ini ke penerima tamu saat tiba untuk catat kehadiran & pengambilan souvenir rombongan.';
+      const label = section.querySelector('.qr-ticket-label');
+      if (label) label.textContent = 'LIHAT QR ROMBONGAN';
+    }
   } else {
     section.style.display = 'none';
   }
@@ -8370,13 +8382,48 @@ function initQrSection() {
 
 function showQrModal() {
   const params = new URLSearchParams(location.search);
+  const groupId   = params.get('group') ? decodeURIComponent(params.get('group')) : '';
   const guestName = params.get('to') ? decodeURIComponent(params.get('to').replace(/\+/g, ' ')) : '';
+  // Mode rombongan: tampilkan group QR (sama dgn yg discan penerima tamu)
+  if (groupId) {
+    const session = params.get('sesi') || 'Sesi 2';
+    showGroupQrModal(groupId, guestName, session);
+    return;
+  }
   if (!guestName) {
     showToast('QR hanya tersedia kalau undangan dibuka via link tamu (URL ada ?to=Nama).', 'error');
     return;
   }
   const session = params.get('sesi') || 'Sesi 2';
   showQrModalFor(guestName, tokenForGuest(guestName), session);
+}
+
+// Render modal QR untuk MODE ROMBONGAN — QR pointing ke scanner group URL
+// (sama dgn yg di-print di kartu & yg discan penerima tamu).
+function showGroupQrModal(groupId, groupName, session) {
+  _qrCurrentName = groupName || groupId;
+  _qrCurrentToken = ''; // token kosong utk mode rombongan
+  _qrCurrentSession = session || '';
+  const displayName = groupName || groupId;
+  const sessLabel = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session]) || session || '';
+
+  document.getElementById('qr-modal-name').textContent = displayName;
+  // Token field kita pakai utk tampilkan group_id
+  document.getElementById('qr-modal-token').textContent = 'Rombongan: ' + groupId;
+  document.getElementById('qr-modal-session').textContent = sessLabel ? 'Sesi: ' + sessLabel : '';
+
+  if (typeof qrcode === 'undefined') {
+    showToast('QR library belum ter-load, refresh halaman.', 'error');
+    return;
+  }
+  // URL QR: scanner group URL (sama dgn getGroupScanUrl di admin panel)
+  const key = (CONFIG && CONFIG.scannerKey) || '';
+  const qrUrl = `${location.origin}${location.pathname}?mode=scan&group=${encodeURIComponent(groupId)}&key=${encodeURIComponent(key)}`;
+  const qr = qrcode(0, 'M');
+  qr.addData(qrUrl);
+  qr.make();
+  document.getElementById('qr-modal-frame').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+  document.getElementById('qr-modal-overlay').classList.add('show');
 }
 
 function showQrModalFor(name, token, session) {
@@ -9051,14 +9098,50 @@ async function submitGroupSlot(e, overrideFlag) {
       souvenirCount: (titipanResult && titipanResult.success) ? 2 : 1,
       timestamp: Date.now()
     };
-    // === 3) Refresh info group → panel muncul ulang dengan data terbaru ===
-    // Tunggu sebentar supaya Apps Script flush() benar-benar committed di edge
-    await new Promise(r => setTimeout(r, 400));
-    await handleGroupScanned(groupId);
+    // === 3) OPTIMISTIC UPDATE — langsung update _currentGroupInfo dari response,
+    // re-render panel INSTANT tanpa fetch ulang (server sudah commit lewat flush()).
+    // Ini jauh lebih cepat & responsif daripada nunggu round-trip kedua.
+    applyOptimisticGroupUpdate(r1, titipanResult);
   } catch (err) {
     showToast('✕ Network: ' + err.message, 'error');
     if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
   }
+}
+
+// OPTIMISTIC UPDATE — update _currentGroupInfo dari response redeemGroupSlot
+// tanpa fetch ulang. Counter & list naik INSTANT, user lihat hasilnya seketika.
+function applyOptimisticGroupUpdate(r1, r2) {
+  if (!_currentGroupInfo) return;
+  const info = _currentGroupInfo;
+  if (!Array.isArray(info.attended)) info.attended = [];
+  // Tambah entry hadir (selalu ada kalau r1.success)
+  if (r1 && r1.success && r1.slot) {
+    info.attended.unshift({
+      name_input: r1.slot.name_input || '',
+      type: 'hadir',
+      titipan_untuk: '',
+      timestamp: r1.slot.timestamp || new Date().toISOString(),
+      received_by: r1.slot.received_by || '',
+      is_override: !!r1.slot.is_override
+    });
+    info.hadirCount   = (info.hadirCount || 0) + 1;
+    info.totalClaimed = (info.totalClaimed || 0) + 1;
+  }
+  // Tambah entry titipan (kalau ada & success)
+  if (r2 && r2.success && r2.slot) {
+    info.attended.unshift({
+      name_input: r2.slot.name_input || '',
+      type: 'titipan',
+      titipan_untuk: r2.slot.titipan_untuk || '',
+      timestamp: r2.slot.timestamp || new Date().toISOString(),
+      received_by: r2.slot.received_by || '',
+      is_override: !!r2.slot.is_override
+    });
+    info.titipanCount = (info.titipanCount || 0) + 1;
+    info.totalClaimed = (info.totalClaimed || 0) + 1;
+  }
+  // Re-render panel INSTANT dari state lokal (no fetch). Counter & list langsung update.
+  renderGroupScanPanel(info);
 }
 
 async function callRedeemGroupSlot(baseUrl, group, nameInput, type, titipanFor, receivedBy, override) {
@@ -9637,15 +9720,16 @@ async function shareGroupQRWA(groupId) {
 }
 
 // === SHARE UNDANGAN DIGITAL via WA (per rombongan) ===
-// Generate link `?to=NamaRombongan&sesi=NamaSesi` + reuse buildWAMessage template
+// Generate link `?to=NamaRombongan&sesi=NamaSesi&group=<id>` + reuse buildWAMessage template
 // supaya pesan WA konsisten dengan format kirim per personal tamu.
+// Param `group=<id>` sebagai marker mode rombongan -> Page render group QR (bukan personal).
 function shareGroupInvitationWA(groupId) {
   const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
   if (!grp) { showToast('Group tidak ditemukan', 'error'); return; }
   const groupName = String(grp.group_name || groupId).trim();
   const session   = String(grp.session || 'Sesi 2').trim();
   const baseUrl   = location.origin + location.pathname;
-  const link      = `${baseUrl}?to=${encodeURIComponent(groupName)}&sesi=${encodeURIComponent(session)}`;
+  const link      = `${baseUrl}?to=${encodeURIComponent(groupName)}&sesi=${encodeURIComponent(session)}&group=${encodeURIComponent(groupId)}`;
   // Reuse template WA personal (sudah tested, format konsisten)
   const msg = typeof buildWAMessage === 'function'
     ? buildWAMessage(groupName, link, session)
