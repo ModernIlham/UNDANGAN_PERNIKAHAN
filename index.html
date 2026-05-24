@@ -7726,6 +7726,83 @@ function normalizePhone(p) {
   return n;
 }
 
+/* =========================================================
+   SESSION-AWARE EVENT SCHEDULE
+   Helper return array event sesuai sesi tamu:
+     - 'Akad'            -> [Akad]
+     - 'Sesi 1/2/3'      -> [Resepsi sesuai sesi]
+     - 'Akad + Resepsi'  -> [Akad, Resepsi (sesi 1)]
+   Hasil dipakai konsisten di: WA message, print card, QR canvas.
+   ========================================================= */
+function getEventScheduleForSession(session) {
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const stripH = (typeof stripHtml === 'function') ? stripHtml : (s => String(s || ''));
+  const akadDate      = stripH(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  const akadTimeStart = stripH(m['events.akad.time_start']) || '16:00';
+  const akadTimeEnd   = stripH(m['events.akad.time_end']) || '17:00';
+  const akadVenue     = stripH(m['events.akad.venue_html']) || 'Hotel Styvie Surabaya';
+  const resepsiDate   = stripH(m['events.resepsi.date']) || akadDate;
+  const resepsiVenue  = stripH(m['events.resepsi.venue_html']) || akadVenue;
+  const sesiTimes = {
+    'Sesi 1': { start: stripH(m['events.resepsi.session1_start']) || '18:30',
+                end:   stripH(m['events.resepsi.session1_end'])   || '19:30' },
+    'Sesi 2': { start: stripH(m['events.resepsi.session2_start']) || '20:00',
+                end:   stripH(m['events.resepsi.session2_end'])   || '21:00' },
+    'Sesi 3': { start: stripH(m['events.resepsi.session3_start']) || '',
+                end:   stripH(m['events.resepsi.session3_end'])   || '' }
+  };
+  const s = String(session || '').trim();
+  const isAkadOnly = (s === 'Akad');
+  const isResepsi  = /^Sesi\s*\d/i.test(s);
+  const isBoth     = (s === 'Akad + Resepsi');
+  const schedule = [];
+  if (isAkadOnly || isBoth) {
+    const timeText = (akadTimeStart && akadTimeEnd) ? `${akadTimeStart} - ${akadTimeEnd} WIB` : '';
+    schedule.push({ label: 'AKAD NIKAH', date: akadDate, timeStart: akadTimeStart,
+                    timeEnd: akadTimeEnd, timeText: timeText, venue: akadVenue });
+  }
+  if (isResepsi || isBoth) {
+    const key = isBoth ? 'Sesi 1' : s;
+    const t = sesiTimes[key] || sesiTimes['Sesi 1'];
+    const timeText = (t.start && t.end) ? `${t.start} - ${t.end} WIB` : '';
+    const lbl = isBoth ? 'RESEPSI' : ('RESEPSI ' + key.toUpperCase());
+    schedule.push({ label: lbl, date: resepsiDate, timeStart: t.start,
+                    timeEnd: t.end, timeText: timeText, venue: resepsiVenue });
+  }
+  // Fallback (sesi tidak dikenal) -> tampilkan akad sebagai default
+  if (schedule.length === 0) {
+    schedule.push({ label: 'ACARA', date: akadDate, timeStart: akadTimeStart,
+                    timeEnd: akadTimeEnd, timeText: `${akadTimeStart} - ${akadTimeEnd} WIB`,
+                    venue: akadVenue });
+  }
+  return schedule;
+}
+// Format schedule jadi blok text untuk WA message (multi-line per event).
+function formatScheduleForWA(schedule) {
+  return schedule.map(e => {
+    return `*${e.label}*\n*Tanggal :* ${e.date}` +
+      (e.timeText ? `\n*Waktu   :* ${e.timeText}` : '') +
+      `\n*Tempat  :* ${e.venue}`;
+  }).join('\n\n');
+}
+// Format jadi HTML untuk print card (compact, ringkas).
+function formatScheduleForCardHtml(schedule) {
+  return schedule.map(e => {
+    const timeShort = (e.timeText || '').replace(' WIB', '');
+    return '<div class="card-schedule-event">' +
+      '<span class="card-schedule-label">' + escapeHtml(e.label) + (timeShort ? ' · ' + escapeHtml(timeShort) : '') + '</span>' +
+      '<span class="card-schedule-date">' + escapeHtml(e.date) + '</span>' +
+    '</div>';
+  }).join('');
+}
+// Format jadi array lines untuk canvas (1 line per event: "AKAD · 16:00 - 17:00 · 21 JUNI 2026")
+function formatScheduleForCanvas(schedule) {
+  return schedule.map(e => {
+    const timeShort = (e.timeText || '').replace(' WIB', '');
+    return e.label + (timeShort ? ' · ' + timeShort : '') + ' · ' + e.date;
+  });
+}
+
 // Template pesan WA — panjang, sopan, ambil konten dinamis dari sheet kalau ada.
 // Parameter session WAJIB diisi supaya tamu tahu sesi mana yg mereka diundang.
 function buildWAMessage(name, link, session) {
@@ -7733,8 +7810,10 @@ function buildWAMessage(name, link, session) {
   const coupleShort = m['cover.names']            || 'Cintya & Fathoni';
   const brideFull   = m['couple.bride.name_full'] || 'Cintya Febri Prasetyowati';
   const groomFull   = m['couple.groom.name_full'] || 'Moh. Ilham Fathoni';
-  const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
-  const venue       = stripHtml(m['events.akad.venue_html']) || 'Hotel Styvie Surabaya';
+  // === SESSION-AWARE: ambil schedule sesuai sesi tamu ===
+  // Akad only -> tampil akad saja, Sesi X -> resepsi saja, Akad+Resepsi -> keduanya.
+  const schedule = getEventScheduleForSession(session);
+  const eventDetailsBlock = formatScheduleForWA(schedule);
   // Ambil label sesi lengkap dari CONFIG.sessionLabels (mis. "Resepsi Sesi 2 -
   // Tamu Undangan (20:00 - 21:00 WIB)"). Fall back ke nilai session apa adanya
   // kalau key tidak ditemukan.
@@ -7760,8 +7839,8 @@ Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud mengundang Bapak/Ibu/S
        —  &  —
 *${safeGroom}*
 
-*Tanggal :* ${eventDate}
-*Tempat  :* ${venue}
+${eventDetailsBlock}
+
 *Sesi Anda :* ${sessionLabel}
 
 Detail lengkap susunan acara, denah lokasi, serta konfirmasi kehadiran (RSVP) dapat dilihat melalui undangan digital berikut:
@@ -8044,6 +8123,9 @@ function openGroupPrintWindow(items, mode) {
     const total = item.count;
     const allowT = g.allow_titipan === true || String(g.allow_titipan).toLowerCase() === 'true';
     const sessionLbl = (CONFIG.sessionLabels && CONFIG.sessionLabels[g.session]) || g.session || '';
+    // SESSION-AWARE schedule per group (Akad / Resepsi / keduanya)
+    const grpSchedule = getEventScheduleForSession(g.session || 'Sesi 1');
+    const grpScheduleHtml = formatScheduleForCardHtml(grpSchedule);
     for (let i = 1; i <= total; i++) {
       cards.push({
         group_id: groupId,
@@ -8054,7 +8136,8 @@ function openGroupPrintWindow(items, mode) {
         memberNum: i,
         memberTotal: total,
         qrSvg: qrSvg,             // group scanner QR (untuk penerima tamu)
-        digitalQrSvg: digitalQrSvg // undangan digital QR (untuk tamu scan)
+        digitalQrSvg: digitalQrSvg, // undangan digital QR (untuk tamu scan)
+        scheduleHtml: grpScheduleHtml
       });
     }
   });
@@ -8062,14 +8145,14 @@ function openGroupPrintWindow(items, mode) {
   let bodyHtml;
   let toolbarLabel;
   if (mode === 'single') {
-    bodyHtml = cards.map(c => buildGroupPrintCardHtml(c, coupleNames, eventDate)).join('');
+    bodyHtml = cards.map(c => buildGroupPrintCardHtml(c, coupleNames)).join('');
     toolbarLabel = cards.length + ' kartu rombongan · single';
   } else {
     // 8 per A4 (4×2)
     const pages = [];
     for (let i = 0; i < cards.length; i += 8) pages.push(cards.slice(i, i + 8));
     bodyHtml = pages.map(pg => {
-      const cardsHtml = pg.map(c => buildGroupPrintCardHtml(c, coupleNames, eventDate)).join('');
+      const cardsHtml = pg.map(c => buildGroupPrintCardHtml(c, coupleNames)).join('');
       const padCount = 8 - pg.length;
       const padHtml = padCount > 0
         ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
@@ -8106,12 +8189,12 @@ function openGroupPrintWindow(items, mode) {
 // Build HTML untuk 1 kartu rombongan (sama dimensi 52.5×148.5mm seperti personal).
 // SEKARANG 2 QR: top half = undangan digital QR (scan -> buka undangan online),
 //               bottom half = group scanner QR (untuk penerima tamu -> souvenir).
-function buildGroupPrintCardHtml(c, coupleNames, eventDate) {
+function buildGroupPrintCardHtml(c, coupleNames) {
   const escGroup = escapeHtml(c.group_name);
   const escCouple = escapeHtml(coupleNames);
-  const escDate = escapeHtml(eventDate);
   const escSession = escapeHtml(c.session || '');
   const escGid = escapeHtml(c.group_id);
+  const scheduleHtml = c.scheduleHtml || '';
   const titipanInfo = c.allow_titipan
     ? '+ Titipan (max ' + c.max_titipan + ')'
     : 'Hanya yang hadir';
@@ -8124,7 +8207,7 @@ function buildGroupPrintCardHtml(c, coupleNames, eventDate) {
     '<div class="card-half card-top">' +
       '<p class="card-tagline">UNDANGAN DIGITAL</p>' +
       '<p class="card-couple">' + escCouple + '</p>' +
-      '<p class="card-date">' + escDate + '</p>' +
+      '<div class="card-schedule">' + scheduleHtml + '</div>' +
       '<div class="card-qr-frame">' + c.digitalQrSvg + '</div>' +
       '<p class="card-group-name">' + escGroup + '</p>' +
       '<p class="card-hint">Scan QR ini untuk buka undangan</p>' +
@@ -8174,18 +8257,20 @@ function openPrintWindow(guests, mode) {
   const assetBase = new URL('assets/', location.href).toString();
   const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
-  const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || 'AHAD, 21 JUNI 2026';
 
   const cards = guests.map(g => {
     const token = tokenForGuest(g.name);
     const digitalUrl = baseUrl + '?to=' + encodeURIComponent(g.name) + '&sesi=' + encodeURIComponent(g.session || 'Sesi 2');
     const souvenirUrl = baseUrl + '?mode=scan&t=' + token + '&n=' + encodeURIComponent(g.name);
+    // SESSION-AWARE schedule: tiap tamu dapat tanggal/waktu sesuai sesinya
+    const schedule = getEventScheduleForSession(g.session || 'Sesi 2');
     return {
       name: g.name,
       session: g.session || '',
       token,
       digitalQr: generateQrSvgString(digitalUrl, 3),
-      souvenirQr: generateQrSvgString(souvenirUrl, 3)
+      souvenirQr: generateQrSvgString(souvenirUrl, 3),
+      scheduleHtml: formatScheduleForCardHtml(schedule)
     };
   });
 
@@ -8193,14 +8278,14 @@ function openPrintWindow(guests, mode) {
   let toolbarLabel;
   if (mode === 'single') {
     // Tiap kartu = halaman sendiri (52.5×148.5mm, sama dgn 1 bagian bulk)
-    bodyHtml = cards.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
+    bodyHtml = cards.map(c => buildPrintCardHtml(c, coupleNames)).join('');
     toolbarLabel = cards.length + ' kartu · single (52.5×148.5mm per kartu)';
   } else {
     // Group 8 per A4 (4 kolom × 2 baris)
     const pages = [];
     for (let i = 0; i < cards.length; i += 8) pages.push(cards.slice(i, i + 8));
     bodyHtml = pages.map(pg => {
-      const cardsHtml = pg.map(c => buildPrintCardHtml(c, coupleNames, eventDate)).join('');
+      const cardsHtml = pg.map(c => buildPrintCardHtml(c, coupleNames)).join('');
       const padCount = 8 - pg.length;
       const padHtml = padCount > 0
         ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
@@ -8233,11 +8318,12 @@ function openPrintWindow(guests, mode) {
   showToast('✓ ' + cards.length + ' kartu siap cetak. Klik "Cetak" di window baru.', 'success');
 }
 
-function buildPrintCardHtml(c, coupleNames, eventDate) {
+function buildPrintCardHtml(c, coupleNames) {
   const escName = escapeHtml(c.name);
   const escCouple = escapeHtml(coupleNames);
-  const escDate = escapeHtml(eventDate);
   const escToken = escapeHtml(c.token);
+  // Schedule: HTML sudah pre-built (session-aware: Akad / Resepsi / keduanya)
+  const scheduleHtml = c.scheduleHtml || '';
   // Nama tetap 8pt; CSS line-clamp 6 supaya nama panjang dengan gelar
   // wrap ke bawah multi-baris (tidak shrink supaya tetap mudah dibaca).
   return '<div class="physical-card">' +
@@ -8248,7 +8334,7 @@ function buildPrintCardHtml(c, coupleNames, eventDate) {
     '<div class="card-half card-top">' +
       '<p class="card-tagline">UNDANGAN DIGITAL</p>' +
       '<p class="card-couple">' + escCouple + '</p>' +
-      '<p class="card-date">' + escDate + '</p>' +
+      '<div class="card-schedule">' + scheduleHtml + '</div>' +
       '<div class="card-qr-frame">' + c.digitalQr + '</div>' +
       '<p class="card-guest">Yth. <strong>' + escName + '</strong></p>' +
       '<p class="card-hint">Scan untuk buka undangan digital</p>' +
@@ -8321,6 +8407,11 @@ function buildPrintCss(assetBase, mode) {
     '.card-tagline { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; letter-spacing: 1.5pt; color: #6b3d1c; margin: 0; font-weight: 600; }' +
     '.card-couple { font-family: "Pinyon Script", cursive; font-size: 11pt; color: #150a03; margin: 0; line-height: 1; max-width: 100%; word-break: break-word; }' +
     '.card-date { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; letter-spacing: 0.8pt; color: #6b3d1c; margin: 0; }' +
+    /* Session-aware schedule (multi-event Akad/Resepsi) — compact untuk kartu narrow */
+    '.card-schedule { margin: 0.5mm 0; display: flex; flex-direction: column; gap: 0.5mm; width: 100%; }' +
+    '.card-schedule-event { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }' +
+    '.card-schedule-label { font-family: "Cinzel", Georgia, serif; font-size: 4pt; letter-spacing: 0.6pt; color: #8a5a2e; font-weight: 700; }' +
+    '.card-schedule-date  { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; letter-spacing: 0.8pt; color: #6b3d1c; }' +
     '.card-qr-frame { background: #fff; border: 0.5pt solid #c9a25a; padding: 0.6mm; border-radius: 1pt; margin: 0.8mm 0; line-height: 0; }' +
     '.card-qr-frame svg { display: block; width: 26mm; height: 26mm; }' +
     /* Guest name — UKURAN TETAP 8pt, wrap multi-baris ke bawah (max 6 baris).
@@ -8537,7 +8628,10 @@ async function generateQrCardCanvas(name, token, session) {
   // Konten dinamis dari sheet
   const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
-  const eventDate   = stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  // SESSION-AWARE schedule (Akad / Resepsi / keduanya) — 1 atau 2 lines untuk canvas
+  const scheduleLines = (typeof formatScheduleForCanvas === 'function')
+    ? formatScheduleForCanvas(getEventScheduleForSession(session))
+    : [stripHtml(m['events.akad.date']) || 'Ahad, 21 Juni 2026'];
   const sessLabel   = (CONFIG && CONFIG.sessionLabels && CONFIG.sessionLabels[session])
                       || session || '';
 
@@ -8591,10 +8685,13 @@ async function generateQrCardCanvas(name, token, session) {
   ctx.fillStyle = '#150a03';
   ctx.fillText(coupleNames, W/2, 200);
 
-  // Date
-  ctx.font = '500 24px Georgia, serif';
+  // Session-aware schedule (1 atau 2 lines)
+  ctx.font = '500 ' + (scheduleLines.length > 1 ? '18px' : '24px') + ' Georgia, serif';
   ctx.fillStyle = '#6b3d1c';
-  ctx.fillText(eventDate, W/2, 240);
+  scheduleLines.forEach((line, idx) => {
+    const lineHeight = scheduleLines.length > 1 ? 24 : 0;
+    ctx.fillText(line, W/2, 240 + idx * lineHeight);
+  });
 
   // Load QR sebagai image lalu draw + finalize secara async
   await new Promise((resolve, reject) => {
@@ -9650,7 +9747,10 @@ async function generateGroupCardCanvas(groupId) {
 
   const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
-  const eventDate   = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : m['events.akad.date']) || 'Ahad, 21 Juni 2026';
+  // SESSION-AWARE schedule (Akad / Resepsi / keduanya) sesuai grp.session
+  const scheduleLines = (typeof formatScheduleForCanvas === 'function')
+    ? formatScheduleForCanvas(getEventScheduleForSession(grp.session || 'Sesi 1'))
+    : [(typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : m['events.akad.date']) || 'Ahad, 21 Juni 2026'];
   const sessionLbl  = (CONFIG.sessionLabels && CONFIG.sessionLabels[grp.session]) || grp.session || '';
   const quota       = Number(grp.quota) || 0;
   const allowT      = grp.allow_titipan === true || String(grp.allow_titipan).toLowerCase() === 'true';
@@ -9691,13 +9791,16 @@ async function generateGroupCardCanvas(groupId) {
   ctx.font = '700 30px Georgia, serif';
   ctx.fillStyle = '#3a200f';
   wrapText_(ctx, grp.group_name || groupId, W/2, 235, W-160, 36);
-  // Event date
-  ctx.font = '500 18px Georgia, serif';
+  // Session-aware schedule (1 atau 2 lines)
+  ctx.font = '500 ' + (scheduleLines.length > 1 ? '15px' : '18px') + ' Georgia, serif';
   ctx.fillStyle = '#6b3d1c';
-  ctx.fillText(eventDate, W/2, 320);
+  scheduleLines.forEach((line, idx) => {
+    const lineHeight = scheduleLines.length > 1 ? 20 : 0;
+    ctx.fillText(line, W/2, 320 + idx * lineHeight);
+  });
   if (sessionLbl) {
-    ctx.font = '600 16px Georgia, serif';
-    ctx.fillText(sessionLbl, W/2, 348);
+    ctx.font = '600 14px Georgia, serif';
+    ctx.fillText(sessionLbl, W/2, 320 + (scheduleLines.length * 20) + 6);
   }
 
   // QR — load image then draw
