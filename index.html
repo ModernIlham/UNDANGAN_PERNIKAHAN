@@ -2253,6 +2253,20 @@ body.scanner-mode > #scanner-page {
 }
 .scanner-hardblock-banner .icon { font-size: 36px; line-height: 1; margin-bottom: 6px; }
 
+/* Notice cache (server lag/offline) — kasih tau user data dari local cache */
+.scanner-cache-notice {
+  background: #fff8e1;
+  border: 1px dashed #d2a857;
+  color: #5a3a0a;
+  border-radius: 5px;
+  padding: 7px 10px;
+  margin: 6px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  font-style: italic;
+}
+.scanner-cache-notice strong { font-style: normal; color: #3a200f; }
+
 /* Banner sukses "baru ditambahkan" — muncul setelah submit berhasil */
 .scanner-success-recent {
   background: linear-gradient(135deg, #d4edda, #b8e0c2);
@@ -9066,9 +9080,96 @@ let _currentGroupInfo = null;
 // Info submission terakhir (dipakai untuk render banner "✓ baru ditambahkan" di panel)
 let _lastGroupSubmission = null;
 
-async function handleGroupScanned(groupId) {
+/* =========================================================
+   PERSISTENT GROUP CACHE — biar counter tidak balik ke 0 saat scan ulang.
+   Penyebab: server kadang lambat commit data (Google Apps Script + sheet
+   read-after-write delay 1-5 detik) → fetch berikutnya bisa return count
+   yang lebih kecil dari yg sebenarnya sudah masuk. Cache di localStorage
+   selalu menyimpan nilai TERBARU yg pernah dilihat client, lalu saat fetch
+   baru kita ambil MAX(server, cache). TTL 10 menit supaya tidak terlalu lama.
+   ========================================================= */
+const GROUP_CACHE_KEY = 'group_info_cache_cf';
+const GROUP_CACHE_TTL = 10 * 60 * 1000; // 10 menit
+
+function readGroupCache() {
+  try { return JSON.parse(localStorage.getItem(GROUP_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function writeGroupCache(cache) {
+  try { localStorage.setItem(GROUP_CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+function getGroupCacheEntry(groupId) {
+  const cache = readGroupCache();
+  const entry = cache[groupId];
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > GROUP_CACHE_TTL) return null; // expired
+  return entry;
+}
+function saveGroupCacheEntry(groupId, info) {
+  if (!groupId || !info) return;
+  const cache = readGroupCache();
+  cache[groupId] = {
+    hadirCount: info.hadirCount || 0,
+    titipanCount: info.titipanCount || 0,
+    totalClaimed: info.totalClaimed || 0,
+    // Simpan max 100 attended entries (cukup utk rombongan terbesar)
+    attended: (info.attended || []).slice(0, 100),
+    timestamp: Date.now()
+  };
+  writeGroupCache(cache);
+}
+// Dedup attended entries by (name_input + type + titipan_untuk) — sort newest first
+function dedupAttended(arr) {
+  const seen = new Set();
+  const result = [];
+  arr.forEach(a => {
+    const key = (a.name_input || '') + '|' + (a.type || '') + '|' + (a.titipan_untuk || '');
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(a);
+    }
+  });
+  return result.sort((a, b) => {
+    const ta = new Date(a.timestamp || 0).getTime() || 0;
+    const tb = new Date(b.timestamp || 0).getTime() || 0;
+    return tb - ta;
+  });
+}
+// Merge server response dengan cached data — selalu pilih MAX agar counter tidak mundur.
+function mergeWithCache(groupId, serverJson) {
+  const cached = getGroupCacheEntry(groupId);
+  if (!cached) return serverJson;
+  // Gabungkan attended (server + cache), dedup, lalu hitung ulang counts
+  const combinedAttended = dedupAttended([
+    ...(serverJson.attended || []),
+    ...(cached.attended || [])
+  ]);
+  const hadirCount   = combinedAttended.filter(a => a.type !== 'titipan').length;
+  const titipanCount = combinedAttended.filter(a => a.type === 'titipan').length;
+  const totalClaimed = combinedAttended.length;
+  // Jika cache lebih tinggi dari server, mark _fromCache utk indicator UI
+  const cacheWasUsed = (cached.totalClaimed || 0) > (serverJson.totalClaimed || 0);
+  return Object.assign({}, serverJson, {
+    attended: combinedAttended,
+    hadirCount: hadirCount,
+    titipanCount: titipanCount,
+    totalClaimed: totalClaimed,
+    _fromCache: cacheWasUsed
+  });
+}
+
+async function handleGroupScanned(groupId, opts) {
+  opts = opts || {};
   _currentGroupId = groupId;
-  showScanResult('warning', '<em>Memuat info rombongan...</em>');
+  // Show cached data immediately (instant feedback while server fetch in progress)
+  const cached = getGroupCacheEntry(groupId);
+  if (cached && !opts.forceRefresh) {
+    // Render dari cache dulu supaya counter langsung muncul, walau belum punya group settings
+    // Kita perlu group settings (quota, allow_titipan) → tetap harus fetch
+    showScanResult('warning', '<em>Memuat info rombongan… (cache: ' + cached.totalClaimed + ' klaim)</em>');
+  } else {
+    showScanResult('warning', '<em>Memuat info rombongan...</em>');
+  }
   const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
   if (!baseUrl) {
     showScanResult('error', '<strong>Spreadsheet belum dikonfigurasi.</strong>');
@@ -9088,11 +9189,34 @@ async function handleGroupScanned(groupId) {
       showScanResult('error', `<strong>✗ ${escapeHtml(json.error || 'Gagal load group')}</strong>`);
       return;
     }
-    _currentGroupInfo = json;
+    // Merge dengan cache: take MAX antara server vs cache (handle server lag)
+    const merged = opts.forceRefresh ? json : mergeWithCache(groupId, json);
+    _currentGroupInfo = merged;
+    // Save kembali ke cache supaya konsisten dgn yg ditampilkan
+    saveGroupCacheEntry(groupId, merged);
     showScanResult('', '');
-    renderGroupScanPanel(json);
+    renderGroupScanPanel(merged);
   } catch (err) {
-    showScanResult('error', `<strong>✗ Network error</strong><br>${escapeHtml(err.message)}`);
+    // Network error: kalau ada cache valid, fallback ke cache supaya panel tetap muncul
+    if (cached) {
+      showScanResult('warning', `<em>⚠ Offline / server timeout — pakai data cache</em>`);
+      // Build pseudo info pakai cache. Tapi kita ga punya group settings,
+      // jadi pakai placeholder. Better than blocking.
+      _currentGroupInfo = {
+        success: true,
+        group: { group_id: groupId, group_name: groupId, session: '-',
+                 quota: 0, allow_titipan: false, max_titipan_per_scan: 1, warn_double_claim: true },
+        attended: cached.attended || [],
+        hadirCount: cached.hadirCount || 0,
+        titipanCount: cached.titipanCount || 0,
+        totalClaimed: cached.totalClaimed || 0,
+        _fromCache: true,
+        _offline: true
+      };
+      renderGroupScanPanel(_currentGroupInfo);
+    } else {
+      showScanResult('error', `<strong>✗ Network error</strong><br>${escapeHtml(err.message)}`);
+    }
   }
 }
 
@@ -9142,10 +9266,20 @@ function renderGroupScanPanel(info) {
          <span>✕ Titipan tidak diizinkan untuk rombongan ini</span>
        </label>`;
 
+  // Cache indicator — kalau counter dari cache (server lag/offline), kasih notice
+  const cacheNotice = info._fromCache
+    ? `<div class="scanner-cache-notice">
+         ${info._offline ? '⚠ Offline' : '⏱ Server tertunda'} —
+         menampilkan data lokal (count lebih tinggi dari server).
+         Klik <strong>Force Refresh</strong> untuk paksa ambil dari server.
+       </div>`
+    : '';
+
   container.innerHTML = `
     <div class="scanner-group-panel">
       <h3>${escapeHtml(g.group_name || g.group_id)}</h3>
       <div class="group-sub">ID: ${escapeHtml(g.group_id)} · Sesi: ${escapeHtml(g.session || '-')}</div>
+      ${cacheNotice}
       ${recentBanner}
       <div class="scanner-group-counter">
         <div class="stat ${fillCls}"><div class="num">${total}${quota ? '/'+quota : ''}</div><div class="lbl">Total Klaim</div></div>
@@ -9153,9 +9287,12 @@ function renderGroupScanPanel(info) {
         <div class="stat"><div class="num">${info.titipanCount}</div><div class="lbl">Titipan</div></div>
       </div>
       <div class="scanner-attended-summary">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:4px;flex-wrap:wrap">
           <strong>Sudah scan (${info.attended.length}):</strong>
-          <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}')" style="background:#b88746;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px">⟳ Refresh</button>
+          <span style="display:flex;gap:4px">
+            <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}')" style="background:#b88746;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px">⟳ Refresh</button>
+            <button type="button" onclick="handleGroupScanned('${escapeAttr(g.group_id)}', { forceRefresh: true })" style="background:#3a200f;color:#fff;border:none;padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer;letter-spacing:0.5px" title="Bypass cache lokal, paksa ambil dari server">⟳⟳ Force</button>
+          </span>
         </div>
         ${attendedHtml}
       </div>
@@ -9282,6 +9419,8 @@ async function submitGroupSlot(e, overrideFlag) {
 
 // OPTIMISTIC UPDATE — update _currentGroupInfo dari response redeemGroupSlot
 // tanpa fetch ulang. Counter & list naik INSTANT, user lihat hasilnya seketika.
+// + SAVE KE CACHE supaya kalau scan ulang nanti, counter tidak balik ke 0 walau
+//   server-side belum sempat commit.
 function applyOptimisticGroupUpdate(r1, r2) {
   if (!_currentGroupInfo) return;
   const info = _currentGroupInfo;
@@ -9312,6 +9451,9 @@ function applyOptimisticGroupUpdate(r1, r2) {
     info.titipanCount = (info.titipanCount || 0) + 1;
     info.totalClaimed = (info.totalClaimed || 0) + 1;
   }
+  // SAVE ke localStorage cache — supaya scan berikutnya pakai sebagai baseline
+  // (handle race condition: server belum commit, scan kedua jangan balik ke 0)
+  saveGroupCacheEntry(_currentGroupId, info);
   // Re-render panel INSTANT dari state lokal (no fetch). Counter & list langsung update.
   renderGroupScanPanel(info);
 }
