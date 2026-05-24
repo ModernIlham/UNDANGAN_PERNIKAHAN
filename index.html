@@ -5100,10 +5100,16 @@ img[src$="loading.svg"] {
 
     <!-- LIST EXISTING GROUPS -->
     <div style="margin-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
         <strong style="font-size:12px;color:#6b3d1c">DAFTAR ROMBONGAN</strong>
-        <button class="mini-btn" onclick="refreshGroupsList()" style="background:#b88746;color:#fff">⟳ Refresh</button>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="mini-btn" onclick="printAllGroupsCards()" style="background:linear-gradient(135deg,#6b3d1c,#3a200f);color:#fff">🖨 Cetak Semua Rombongan (A4 8-up)</button>
+          <button class="mini-btn" onclick="refreshGroupsList()" style="background:#b88746;color:#fff">⟳ Refresh</button>
+        </div>
       </div>
+      <p style="font-size:10.5px;color:#7a3d00;background:#fff8e1;padding:6px 8px;border-radius:4px;border-left:3px solid #d2a857;margin-bottom:8px;line-height:1.5">
+        💡 Tombol cetak per rombongan akan menghasilkan <strong>N kartu sesuai kuota</strong> (mis. kuota 15 → cetak 15 kartu identik dengan QR group yang sama). Distribusikan ke tiap anggota rombongan via PIC kantor.
+      </p>
       <div id="admin-groups-list" style="min-height:40px">
         <p style="font-size:11px;color:#888;padding:8px">Memuat daftar rombongan…</p>
       </div>
@@ -7924,8 +7930,181 @@ function printAllPhysicalCards() {
     showToast('Belum ada tamu untuk dicetak', 'error');
     return;
   }
-  // Mode 'bulk' — 6 kartu per A4 (2 kolom × 3 baris)
+  // Mode 'bulk' — 8 kartu per A4 (4 kolom × 2 baris)
   openPrintWindow(guests, 'bulk');
+}
+
+/* =========================================================
+   GROUP / ROMBONGAN — Print Bulk A4 8-up
+   Mencetak N kartu identik (sesuai kuota) per rombongan dengan
+   format sama seperti cetak personal (A4 8-up, 52.5×148.5mm).
+   ========================================================= */
+function printGroupCards(groupId) {
+  const grp = (Array.isArray(SHEET_GROUPS_LIST) ? SHEET_GROUPS_LIST : [])
+    .find(g => String(g.group_id || '').trim() === String(groupId).trim());
+  if (!grp) {
+    showToast('Rombongan tidak ditemukan. Refresh dulu.', 'error');
+    return;
+  }
+  const quota = Number(grp.quota) || 0;
+  if (quota <= 0) {
+    showToast('Kuota rombongan belum diatur (atau 0). Edit dulu kuotanya.', 'error');
+    return;
+  }
+  if (quota > 200) {
+    if (!confirm('Kuota ' + quota + ' kartu cukup banyak. Lanjut cetak?')) return;
+  }
+  openGroupPrintWindow([{ group: grp, count: quota }], 'bulk');
+}
+
+function printAllGroupsCards() {
+  const groups = (Array.isArray(SHEET_GROUPS_LIST) ? SHEET_GROUPS_LIST : [])
+    .filter(g => Number(g.quota) > 0);
+  if (groups.length === 0) {
+    showToast('Belum ada rombongan dengan kuota terisi.', 'error');
+    return;
+  }
+  const totalCards = groups.reduce((acc, g) => acc + (Number(g.quota) || 0), 0);
+  if (!confirm('Akan dicetak total ' + totalCards + ' kartu dari ' + groups.length + ' rombongan. Lanjut?')) return;
+  const items = groups.map(g => ({ group: g, count: Number(g.quota) || 0 }));
+  openGroupPrintWindow(items, 'bulk');
+}
+
+function openGroupPrintWindow(items, mode) {
+  mode = mode === 'single' ? 'single' : 'bulk';
+  if (typeof qrcode === 'undefined') {
+    showToast('QR library belum ter-load. Refresh halaman & coba lagi.', 'error');
+    return;
+  }
+  const w = window.open('', '_blank', 'width=900,height=720');
+  if (!w) {
+    showToast('Popup diblokir. Izinkan popup untuk site ini.', 'error');
+    return;
+  }
+  const assetBase = new URL('assets/', location.href).toString();
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+  const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || 'AHAD, 21 JUNI 2026';
+
+  // Expand items: tiap group jadi N kartu (sesuai count). Tiap kartu dapet nomor "X dari Y".
+  const cards = [];
+  items.forEach(item => {
+    const g = item.group;
+    const groupId = String(g.group_id || '').trim();
+    const groupQrUrl = (typeof getGroupScanUrl === 'function')
+      ? getGroupScanUrl(groupId)
+      : (location.origin + location.pathname + '?mode=scan&group=' + encodeURIComponent(groupId) +
+         '&key=' + encodeURIComponent((CONFIG && CONFIG.scannerKey) || ''));
+    const qrSvg = generateQrSvgString(groupQrUrl, 3);
+    const total = item.count;
+    const allowT = g.allow_titipan === true || String(g.allow_titipan).toLowerCase() === 'true';
+    const sessionLbl = (CONFIG.sessionLabels && CONFIG.sessionLabels[g.session]) || g.session || '';
+    for (let i = 1; i <= total; i++) {
+      cards.push({
+        group_id: groupId,
+        group_name: g.group_name || groupId,
+        session: sessionLbl,
+        allow_titipan: allowT,
+        max_titipan: Number(g.max_titipan_per_scan) || 1,
+        memberNum: i,
+        memberTotal: total,
+        qrSvg: qrSvg
+      });
+    }
+  });
+
+  let bodyHtml;
+  let toolbarLabel;
+  if (mode === 'single') {
+    bodyHtml = cards.map(c => buildGroupPrintCardHtml(c, coupleNames, eventDate)).join('');
+    toolbarLabel = cards.length + ' kartu rombongan · single';
+  } else {
+    // 8 per A4 (4×2)
+    const pages = [];
+    for (let i = 0; i < cards.length; i += 8) pages.push(cards.slice(i, i + 8));
+    bodyHtml = pages.map(pg => {
+      const cardsHtml = pg.map(c => buildGroupPrintCardHtml(c, coupleNames, eventDate)).join('');
+      const padCount = 8 - pg.length;
+      const padHtml = padCount > 0
+        ? Array(padCount).fill('<div class="physical-card physical-card-empty"></div>').join('')
+        : '';
+      return '<div class="a4-page">' + cardsHtml + padHtml + '</div>';
+    }).join('');
+    const groupCount = items.length;
+    toolbarLabel = cards.length + ' kartu dari ' + groupCount + ' rombongan · A4, 8 kartu per halaman (4×2)';
+  }
+
+  const html = '<!DOCTYPE html>\n<html lang="id">\n<head>\n' +
+    '<meta charset="utf-8">\n' +
+    '<title>Cetak Kartu Rombongan &mdash; ' + cards.length + ' kartu</title>\n' +
+    '<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Pinyon+Script&display=swap" rel="stylesheet">\n' +
+    '<style>' + buildPrintCss(assetBase, mode) + buildGroupPrintExtraCss() + '</style>\n' +
+    '</head>\n<body>\n' +
+    '<div class="print-toolbar">' +
+      '<strong>' + toolbarLabel + '</strong>' +
+      '<span style="opacity:.7">&nbsp;·&nbsp; lipat di garis putus-putus</span>' +
+      '<span style="flex:1"></span>' +
+      '<button onclick="window.print()" class="print-btn-action">🖨 Cetak / Save PDF</button>' +
+      '<button onclick="window.close()">Tutup</button>' +
+    '</div>\n' +
+    '<div class="pages-wrap">\n' + bodyHtml + '\n</div>\n' +
+    '</body>\n</html>';
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+
+  showToast('✓ ' + cards.length + ' kartu rombongan siap cetak. Klik "Cetak" di window baru.', 'success');
+}
+
+// Build HTML untuk 1 kartu rombongan (sama dimensi 52.5×148.5mm seperti personal,
+// tapi konten beda: 1 QR group, group name besar, "X dari Y", policy titipan info)
+function buildGroupPrintCardHtml(c, coupleNames, eventDate) {
+  const escGroup = escapeHtml(c.group_name);
+  const escCouple = escapeHtml(coupleNames);
+  const escDate = escapeHtml(eventDate);
+  const escSession = escapeHtml(c.session || '');
+  const escGid = escapeHtml(c.group_id);
+  const titipanInfo = c.allow_titipan
+    ? '+ Titipan (max ' + c.max_titipan + ')'
+    : 'Hanya yang hadir';
+
+  return '<div class="physical-card physical-card-group">' +
+    '<span class="card-corner corner-tl"></span>' +
+    '<span class="card-corner corner-tr"></span>' +
+    '<span class="card-corner corner-bl"></span>' +
+    '<span class="card-corner corner-br"></span>' +
+    '<div class="card-half card-top">' +
+      '<p class="card-tagline">UNDANGAN ROMBONGAN</p>' +
+      '<p class="card-couple">' + escCouple + '</p>' +
+      '<p class="card-date">' + escDate + '</p>' +
+      (escSession ? '<p class="card-session-grp">' + escSession + '</p>' : '') +
+      '<p class="card-group-name">' + escGroup + '</p>' +
+      '<p class="card-hint">Tunjukkan kartu ini saat tiba<br>untuk pengambilan souvenir</p>' +
+    '</div>' +
+    '<div class="fold-line"></div>' +
+    '<div class="card-half card-bottom">' +
+      '<p class="card-tagline">E-TIKET ROMBONGAN</p>' +
+      '<p class="card-couple">' + escCouple + '</p>' +
+      '<div class="card-qr-frame card-qr-frame-big">' + c.qrSvg + '</div>' +
+      '<p class="card-group-id">' + escGid + '</p>' +
+      '<p class="card-titipan-info">' + escapeHtml(titipanInfo) + '</p>' +
+      '<p class="card-member-num">Kartu ' + c.memberNum + ' dari ' + c.memberTotal + '</p>' +
+    '</div>' +
+  '</div>';
+}
+
+// CSS tambahan khusus group card (di-append ke output buildPrintCss)
+function buildGroupPrintExtraCss() {
+  return (
+    /* Group-specific overrides: 1 QR lebih besar, group name lebih dominan */
+    '.physical-card-group .card-group-name { font-family: "Cinzel", Georgia, serif; font-size: 8.5pt; letter-spacing: 0.8pt; color: #3a200f; margin: 1.2mm 0 0; font-weight: 700; line-height: 1.2; max-width: 100%; padding: 0 0.5mm; word-break: break-word; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-align: center; text-transform: uppercase; }' +
+    '.physical-card-group .card-session-grp { font-family: "Cormorant Garamond", Georgia, serif; font-size: 5pt; color: #6b3d1c; margin: 0.4mm 0 0; font-style: italic; }' +
+    '.physical-card-group .card-qr-frame-big svg { width: 32mm !important; height: 32mm !important; }' +
+    '.physical-card-group .card-group-id { font-family: "Courier New", monospace; font-size: 5pt; color: #6b3d1c; margin: 0.5mm 0 0; letter-spacing: 0.5pt; font-weight: 700; word-break: break-all; max-width: 100%; padding: 0 1mm; }' +
+    '.physical-card-group .card-titipan-info { font-family: "Cormorant Garamond", Georgia, serif; font-size: 4.8pt; color: #856404; margin: 0.5mm 0 0; font-style: italic; font-weight: 600; }' +
+    '.physical-card-group .card-member-num { font-family: "Cinzel", Georgia, serif; font-size: 4.5pt; color: #8a5a2e; margin: 0.6mm 0 0; letter-spacing: 0.8pt; font-weight: 600; opacity: 0.85; }'
+  );
 }
 
 function openPrintWindow(guests, mode) {
@@ -9137,6 +9316,7 @@ function renderGroupsList() {
         <div class="group-item-actions">
           <button class="mini-btn" onclick="generateGroupQR('${escapeAttr(gid)}')" style="background:#b88746;color:#fff">📷 Generate QR</button>
           <button class="mini-btn" onclick="shareGroupQRWA('${escapeAttr(gid)}')" style="background:#25D366;color:#fff">📱 Share WA</button>
+          <button class="mini-btn" onclick="printGroupCards('${escapeAttr(gid)}')" style="background:#6b3d1c;color:#fff">🖨 Cetak ${quota || '?'} Kartu</button>
           <button class="mini-btn" onclick="viewGroupAttendance('${escapeAttr(gid)}')">👥 Detail</button>
           <button class="mini-btn" onclick="exportGroupCSV('${escapeAttr(gid)}')" style="background:#3a200f;color:#fff">📥 CSV</button>
           <button class="mini-btn" onclick="editGroup('${escapeAttr(gid)}')">✏️ Edit</button>
