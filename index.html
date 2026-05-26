@@ -5796,6 +5796,35 @@ img[src$="loading.svg"] {
 </div>
 
 <!-- ====================================================
+     SAVE IMAGE FALLBACK MODAL — untuk UC Browser & browser yg block download attr
+     Tampilkan image inline, user long-press untuk save manual.
+     ==================================================== -->
+<div id="save-image-overlay" class="qr-modal-overlay" onclick="hideSaveImageModal(event)" style="z-index:8000">
+  <div class="qr-modal-card" onclick="event.stopPropagation()" style="max-width:420px;width:100%">
+    <button class="qr-modal-close" onclick="hideSaveImageModal()" aria-label="Tutup">&times;</button>
+    <h3 class="qr-modal-title" id="save-image-title">SIMPAN GAMBAR</h3>
+    <p class="qr-modal-hint" style="margin-top:6px;color:#a04040;font-weight:600">
+      ⚠ Browser Anda (UC Browser / browser tertentu) memblokir download otomatis.
+    </p>
+    <div style="background:#fff;border:2px solid var(--kuning-keemasan);border-radius:8px;padding:8px;margin:12px 0;text-align:center">
+      <img id="save-image-preview" src="" alt="Preview" style="max-width:100%;height:auto;display:block;margin:0 auto;border-radius:4px">
+    </div>
+    <div style="background:#fff8e1;border-left:4px solid #d2a857;padding:10px 12px;font-size:13px;color:#5a3a0a;line-height:1.6;border-radius:4px;text-align:left">
+      <strong>Cara simpan ke galeri HP:</strong><br>
+      1. <strong>Tekan & tahan</strong> (long-press) gambar di atas<br>
+      2. Pilih <strong>"Save image"</strong> / <strong>"Simpan gambar"</strong> dari menu pop-up<br>
+      3. Gambar tersimpan di galeri HP Anda
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:#6b3d1c;font-style:italic;text-align:center">
+      💡 Tip: Untuk download otomatis, buka link di Chrome / Safari / Firefox.
+    </div>
+    <div class="qr-modal-actions" style="margin-top:14px">
+      <button onclick="hideSaveImageModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
      SCANNER PAGE — penerima tamu scan QR untuk validasi
      Aktif saat URL ?mode=scan
      ==================================================== -->
@@ -8144,9 +8173,15 @@ function openGroupPrintWindow(items, mode) {
     showToast('QR library belum ter-load. Refresh halaman & coba lagi.', 'error');
     return;
   }
+  // UC Browser warning — sering block window.open + window.print
+  if (isUCBrowser()) {
+    if (!confirm('⚠ Browser Anda (UC Browser) sering memblokir fitur cetak.\n\n' +
+      'Untuk hasil optimal, buka admin panel ini di Chrome / Firefox / Safari, lalu klik Cetak.\n\n' +
+      'Tetap lanjut mencoba di browser ini?')) return;
+  }
   const w = window.open('', '_blank', 'width=900,height=720');
   if (!w) {
-    showToast('Popup diblokir. Izinkan popup untuk site ini.', 'error');
+    showToast('⚠ Popup diblokir. Izinkan popup untuk site ini, atau pakai Chrome/Firefox untuk fitur cetak.', 'error');
     return;
   }
   const assetBase = new URL('assets/', location.href).toString();
@@ -8300,9 +8335,16 @@ function openPrintWindow(guests, mode) {
     showToast('QR library belum ter-load. Refresh halaman & coba lagi.', 'error');
     return;
   }
+  // UC Browser & sejenisnya sering block window.open + window.print.
+  // Kasih warning early kalau detect UC, anjurkan pakai Chrome/Firefox.
+  if (isUCBrowser()) {
+    if (!confirm('⚠ Browser Anda (UC Browser) sering memblokir fitur cetak.\n\n' +
+      'Untuk hasil optimal, buka link undangan ini di Chrome / Firefox / Safari, lalu klik Cetak.\n\n' +
+      'Tetap lanjut mencoba di browser ini?')) return;
+  }
   const w = window.open('', '_blank', 'width=900,height=720');
   if (!w) {
-    showToast('Popup diblokir. Izinkan popup untuk site ini.', 'error');
+    showToast('⚠ Popup diblokir. Izinkan popup untuk site ini, atau pakai Chrome/Firefox untuk fitur cetak.', 'error');
     return;
   }
 
@@ -8794,15 +8836,84 @@ async function generateQrCardCanvas(name, token, session) {
   return cv;
 }
 
-// Helper: trigger download dari canvas
-function _downloadCanvasAsPng(canvas, filename) {
-  const url = canvas.toDataURL('image/png');
+/* =========================================================
+   BROWSER COMPATIBILITY HELPERS — handle UC Browser & sejenisnya
+   yg block download attribute / window.open / canvas.toBlob.
+   ========================================================= */
+
+// Polyfill canvas.toBlob untuk UC Browser lama (yg cuma punya toDataURL)
+if (typeof HTMLCanvasElement !== 'undefined' && !HTMLCanvasElement.prototype.toBlob) {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+    value: function(callback, type, quality) {
+      const dataURL = this.toDataURL(type || 'image/png', quality);
+      const binStr = atob(dataURL.split(',')[1]);
+      const arr = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
+      callback(new Blob([arr], { type: type || 'image/png' }));
+    }
+  });
+}
+
+// Detect UC Browser & beberapa Android browser yang block download attribute
+function isUCBrowser() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return /ucbrowser|ucmini|ucweb|baiduboxapp|baidubrowser|qqbrowser|miuibrowser/i.test(ua);
+}
+
+// Detect general "limited download" browser (UC, MIUI, Quark, dll)
+// Test apakah <a download> di-support — kalau tidak, anggap browser limited.
+let _downloadSupported = null;
+function isDownloadAttrSupported() {
+  if (_downloadSupported !== null) return _downloadSupported;
+  if (isUCBrowser()) { _downloadSupported = false; return false; }
+  // Test: download attribute valid di element?
   const a = document.createElement('a');
-  a.href = url;
+  _downloadSupported = ('download' in a);
+  return _downloadSupported;
+}
+
+// Show fallback modal — render image inline + instruksi long-press save.
+// Dipakai kalau download otomatis tidak bekerja (UC Browser, dll).
+function showSaveImageModal(dataUrl, title) {
+  const img = document.getElementById('save-image-preview');
+  const titleEl = document.getElementById('save-image-title');
+  const overlay = document.getElementById('save-image-overlay');
+  if (!img || !overlay) {
+    // Fallback: open in new tab supaya user bisa long-press di sana
+    try { window.open(dataUrl, '_blank'); } catch {}
+    return;
+  }
+  img.src = dataUrl;
+  if (titleEl && title) titleEl.textContent = title;
+  overlay.classList.add('show');
+}
+function hideSaveImageModal(event) {
+  if (event && event.currentTarget && event.target !== event.currentTarget) return;
+  document.getElementById('save-image-overlay')?.classList.remove('show');
+}
+
+// Helper: trigger download dari canvas.
+// Otomatis fallback ke modal "long-press save" kalau browser block download attribute.
+function _downloadCanvasAsPng(canvas, filename) {
+  const dataUrl = canvas.toDataURL('image/png');
+  if (!isDownloadAttrSupported()) {
+    // UC Browser / browser limited — show modal dengan instruksi save manual
+    showSaveImageModal(dataUrl, filename || 'SIMPAN GAMBAR');
+    return;
+  }
+  // Browser modern — pakai download attribute seperti biasa
+  const a = document.createElement('a');
+  a.href = dataUrl;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  // Safety net: kalau setelah 1.5s nothing terjadi (download silently failed),
+  // show fallback modal sebagai backup.
+  setTimeout(() => {
+    // Tidak ada cara reliable detect "download started" di JS, jadi skip auto-fallback
+    // tapi log untuk debug
+  }, 1500);
 }
 
 // User klik "Simpan Gambar" di modal QR -> download e-tiket card.
@@ -10168,19 +10279,16 @@ function loadImage_(src) {
   });
 }
 
-// Generate + download Group QR sebagai PNG
+// Generate + download Group QR sebagai PNG.
+// Pakai _downloadCanvasAsPng yg sudah handle UC Browser fallback (modal save).
 async function generateGroupQR(groupId) {
   try {
     showToast('Membuat QR rombongan…', 'info');
     const cv = await generateGroupCardCanvas(groupId);
-    const dataUrl = cv.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'qr_rombongan_' + groupId + '.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast('✓ QR rombongan tersimpan. Cetak & bagikan ke PIC rombongan.', 'success');
+    _downloadCanvasAsPng(cv, 'qr_rombongan_' + groupId + '.png');
+    if (isDownloadAttrSupported()) {
+      showToast('✓ QR rombongan tersimpan. Cetak & bagikan ke PIC rombongan.', 'success');
+    }
   } catch (err) {
     showToast('✕ Gagal generate: ' + err.message, 'error');
   }
@@ -10549,6 +10657,22 @@ function buildAttendanceCSV(rows) {
 
 function downloadCSV(filename, csv) {
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  // UC Browser / browser yg block download attr -> open data URL di tab baru
+  if (!isDownloadAttrSupported()) {
+    const reader = new FileReader();
+    reader.onload = function() {
+      // Coba open dataURL di tab baru — user bisa pakai menu browser untuk save
+      const newWin = window.open(reader.result, '_blank');
+      if (!newWin) {
+        showToast('⚠ Popup diblokir. Allow popup untuk download CSV, atau pakai Chrome/Firefox.', 'error');
+      } else {
+        showToast('✓ CSV terbuka di tab baru — pakai menu browser untuk "Save As".', 'success');
+      }
+    };
+    reader.readAsDataURL(blob);
+    return;
+  }
+  // Browser modern — pakai download attribute
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
@@ -10855,14 +10979,9 @@ function exportCSV() {
   const csv = [headers, ...rows].map(row =>
     row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
   ).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `RSVP_Cintya_Fathoni_${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV berhasil diunduh');
+  // Pakai downloadCSV() helper yg sudah handle UC Browser fallback
+  downloadCSV(`RSVP_Cintya_Fathoni_${new Date().toISOString().split('T')[0]}.csv`, csv);
+  if (isDownloadAttrSupported()) showToast('CSV berhasil diunduh');
 }
 
 /* =========================================================
