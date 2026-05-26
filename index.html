@@ -5084,6 +5084,33 @@ img[src$="loading.svg"] {
     </div>
   </div>
 
+  <!-- BACKUP & RESTORE DATA (untuk pindah browser / migrate device) -->
+  <div class="admin-section" style="border:2px solid #5a3a8f;background:linear-gradient(180deg,#f3edf9,#e5d9f3)">
+    <h3 style="color:#3a2060">💾 BACKUP & RESTORE DATA</h3>
+    <p style="font-size:12px;color:#3a2060;margin-bottom:10px;line-height:1.5">
+      Backup semua data lokal (daftar tamu, RSVP, cache rombongan, nama penerima tamu) ke file JSON.
+      Berguna untuk: <strong>pindah browser</strong> (mis. dari UC Browser ke Chrome), pindah device, atau jaga-jaga.
+    </p>
+    <div id="backup-stats" style="background:#fff;border:1px solid #b39ddb;border-radius:5px;padding:8px 10px;font-size:11.5px;color:#3a2060;line-height:1.7;margin-bottom:10px"></div>
+
+    <strong style="font-size:11px;color:#3a2060;letter-spacing:1px;display:block;margin-bottom:6px">📥 BACKUP (export data)</strong>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="add-btn" onclick="downloadBackupFile()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#5a3a8f,#3a2060)">⬇ Download File Backup (.json)</button>
+      <button class="add-btn" onclick="showBackupAsText()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#7a5fa8,#5a3a8f)">📋 Tampilkan sbg Teks (copy-paste)</button>
+    </div>
+
+    <strong style="font-size:11px;color:#3a2060;letter-spacing:1px;display:block;margin-bottom:6px">📤 RESTORE (import data)</strong>
+    <p style="font-size:11px;color:#7a3d00;background:#fff8e1;padding:6px 8px;border-radius:4px;border-left:3px solid #d2a857;margin-bottom:6px;line-height:1.5">
+      ⚠ Data lokal yang ada akan <strong>di-merge</strong> (digabung) dengan backup — tamu dengan nama sama tidak dobel. Receiver name & cache rombongan akan di-replace dengan versi terbaru.
+    </p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <label class="add-btn" for="restore-file-input" style="flex:1;min-width:160px;background:linear-gradient(135deg,#3a2060,#1a0040);text-align:center;cursor:pointer;display:inline-block">⬆ Pilih File Backup (.json)</label>
+      <input type="file" id="restore-file-input" accept=".json,application/json" style="display:none" onchange="restoreFromFile(event)">
+      <button class="add-btn" onclick="showRestoreTextarea()" style="flex:1;min-width:160px;background:linear-gradient(135deg,#5a3a8f,#7a5fa8)">📝 Paste Teks Backup</button>
+    </div>
+    <div id="backup-result" style="margin-top:10px;font-size:11.5px"></div>
+  </div>
+
   <!-- ROMBONGAN / GROUP QR -->
   <div class="admin-section" style="border:2px solid #b88746;background:linear-gradient(180deg,#fff7e6,#fdebc9)">
     <h3 style="color:#6b3d1c">👥 MANAJEMEN ROMBONGAN (Group QR)</h3>
@@ -7645,6 +7672,7 @@ function openAdmin() {
   renderGroupsList();          // Render list rombongan dari cache (kalau sudah ada)
   renderAttendanceAudit();     // Render audit log dari cache
   refreshGroupsList(true);     // Lalu fetch fresh dari sheet (background) — akan trigger ulang
+  if (typeof updateBackupStats === 'function') updateBackupStats();  // Update statistik backup
 }
 
 function closeAdmin() {
@@ -10982,6 +11010,290 @@ function exportCSV() {
   // Pakai downloadCSV() helper yg sudah handle UC Browser fallback
   downloadCSV(`RSVP_Cintya_Fathoni_${new Date().toISOString().split('T')[0]}.csv`, csv);
   if (isDownloadAttrSupported()) showToast('CSV berhasil diunduh');
+}
+
+/* =========================================================
+   BACKUP & RESTORE DATA LOKAL
+   Collect 4 localStorage keys (guests_cf, rsvps_cf, scanner_received_by_cf,
+   group_info_cache_cf) -> 1 JSON file. Bisa di-restore di browser/device lain.
+   Penting untuk UC Browser users yg mau pindah ke Chrome/Firefox.
+   ========================================================= */
+const BACKUP_VERSION = 1;
+const BACKUP_KEYS = ['guests_cf', 'rsvps_cf', 'scanner_received_by_cf', 'group_info_cache_cf'];
+
+function backupAllData() {
+  const data = {};
+  BACKUP_KEYS.forEach(key => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) data[key] = raw; // simpan as string, parse saat restore
+    } catch (e) { /* skip */ }
+  });
+  return {
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    source: navigator.userAgent || 'unknown',
+    appUrl: location.origin + location.pathname,
+    data: data
+  };
+}
+
+// Refresh statistik backup di admin panel
+function updateBackupStats() {
+  const el = document.getElementById('backup-stats');
+  if (!el) return;
+  let guestCount = 0, rsvpCount = 0, groupCount = 0;
+  let receiverName = '';
+  try { guestCount = (JSON.parse(localStorage.getItem('guests_cf') || '[]')).length; } catch {}
+  try { rsvpCount = (JSON.parse(localStorage.getItem('rsvps_cf') || '[]')).length; } catch {}
+  try {
+    const gc = JSON.parse(localStorage.getItem('group_info_cache_cf') || '{}');
+    groupCount = Object.keys(gc).length;
+  } catch {}
+  try { receiverName = localStorage.getItem('scanner_received_by_cf') || ''; } catch {}
+  el.innerHTML = `
+    <strong>Data lokal saat ini:</strong><br>
+    • 👥 <strong>${guestCount}</strong> tamu di daftar (guests_cf)<br>
+    • 📋 <strong>${rsvpCount}</strong> RSVP tersimpan (rsvps_cf)<br>
+    • 🎫 <strong>${groupCount}</strong> rombongan di-cache (group_info_cache_cf)<br>
+    • 👤 Nama penerima tamu: <strong>${receiverName ? escapeHtml(receiverName) : '<em>belum diisi</em>'}</strong>
+  `;
+}
+
+// Download backup sebagai file JSON.
+// UC Browser fallback: kalau download attr tidak support, tampilkan teks utk copy.
+function downloadBackupFile() {
+  const backup = backupAllData();
+  const json = JSON.stringify(backup, null, 2);
+  const filename = `Backup_Undangan_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
+  if (!isDownloadAttrSupported()) {
+    // UC Browser → tampil teks supaya bisa di-copy manual
+    showBackupAsText();
+    return;
+  }
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const res = document.getElementById('backup-result');
+  if (res) res.innerHTML = `<span style="color:#155724">✓ File backup ter-download (<strong>${escapeHtml(filename)}</strong>). Simpan baik2 — bisa di-restore di browser/device lain.</span>`;
+  showToast('✓ Backup ter-download', 'success');
+}
+
+// UC fallback: tampilkan backup sebagai teks JSON di textarea utk di-copy
+function showBackupAsText() {
+  const backup = backupAllData();
+  const json = JSON.stringify(backup, null, 2);
+  const res = document.getElementById('backup-result');
+  if (!res) return;
+  res.innerHTML = `
+    <div style="background:#fff;border:2px solid #5a3a8f;border-radius:6px;padding:10px;margin-top:8px">
+      <strong style="font-size:11px;color:#3a2060;letter-spacing:1px">📋 BACKUP DATA — COPY TEKS DI BAWAH</strong>
+      <p style="font-size:11px;color:#3a2060;margin:6px 0;line-height:1.5">
+        Klik tombol <strong>"Copy"</strong> di bawah, lalu paste ke aplikasi Notes/Files/Email/Drive di HP Anda.
+        Simpan teks ini baik2 untuk di-restore di browser lain.
+      </p>
+      <textarea id="backup-textarea" readonly style="width:100%;min-height:200px;padding:8px;border:1px solid #b39ddb;border-radius:4px;font-family:'Courier New',monospace;font-size:10px;color:#3a2060;background:#faf5ff;box-sizing:border-box;resize:vertical">${escapeHtml(json)}</textarea>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="mini-btn" onclick="copyBackupText()" style="background:#3a2060;color:#fff;flex:1">📋 Copy Semua</button>
+        <button class="mini-btn" onclick="document.getElementById('backup-result').innerHTML=''" style="background:#888;color:#fff">Tutup</button>
+      </div>
+      <p style="font-size:10px;color:#6a4a8f;margin-top:6px;font-style:italic">
+        💡 Setelah di-copy: buka browser lain (Chrome/Firefox), buka admin panel → klik <strong>"📝 Paste Teks Backup"</strong> → paste teks ini → klik Restore.
+      </p>
+    </div>
+  `;
+}
+
+// Copy textarea ke clipboard (UC-compatible — pakai textarea select+execCommand)
+function copyBackupText() {
+  const ta = document.getElementById('backup-textarea');
+  if (!ta) return;
+  try {
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, 99999); // mobile
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(
+        () => showToast('✓ Backup ter-copy ke clipboard', 'success'),
+        () => showToast('⚠ Copy gagal — pilih manual (Ctrl+A, Ctrl+C)', 'error')
+      );
+      return;
+    }
+    if (copied) showToast('✓ Backup ter-copy ke clipboard', 'success');
+    else showToast('⚠ Copy gagal — pilih teks manual & copy', 'error');
+  } catch (e) {
+    showToast('Gagal copy: ' + e.message, 'error');
+  }
+}
+
+// Tampilkan textarea kosong untuk paste teks backup → klik Restore
+function showRestoreTextarea() {
+  const res = document.getElementById('backup-result');
+  if (!res) return;
+  res.innerHTML = `
+    <div style="background:#fff;border:2px solid #5a3a8f;border-radius:6px;padding:10px;margin-top:8px">
+      <strong style="font-size:11px;color:#3a2060;letter-spacing:1px">📝 PASTE TEKS BACKUP DI SINI</strong>
+      <p style="font-size:11px;color:#3a2060;margin:6px 0;line-height:1.5">
+        Paste teks JSON backup yang sebelumnya di-copy dari browser lain.
+      </p>
+      <textarea id="restore-textarea" placeholder="Paste teks JSON di sini..." style="width:100%;min-height:180px;padding:8px;border:1px solid #b39ddb;border-radius:4px;font-family:'Courier New',monospace;font-size:10px;color:#3a2060;background:#faf5ff;box-sizing:border-box;resize:vertical"></textarea>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="mini-btn" onclick="restoreFromText()" style="background:#3a2060;color:#fff;flex:1">✓ Restore Sekarang</button>
+        <button class="mini-btn" onclick="document.getElementById('backup-result').innerHTML=''" style="background:#888;color:#fff">Batal</button>
+      </div>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('restore-textarea')?.focus(), 50);
+}
+
+// Restore dari file (input type=file onchange)
+function restoreFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function() {
+    try {
+      const backup = JSON.parse(reader.result);
+      applyRestore(backup);
+    } catch (e) {
+      showToast('✕ File bukan JSON valid: ' + e.message, 'error');
+    }
+  };
+  reader.onerror = () => showToast('✕ Gagal baca file', 'error');
+  reader.readAsText(file);
+  // Reset input supaya kalau pilih file sama bisa trigger lagi
+  event.target.value = '';
+}
+
+// Restore dari paste teks (textarea)
+function restoreFromText() {
+  const ta = document.getElementById('restore-textarea');
+  if (!ta || !ta.value.trim()) {
+    showToast('Textarea kosong — paste teks backup dulu', 'error');
+    return;
+  }
+  try {
+    const backup = JSON.parse(ta.value);
+    applyRestore(backup);
+  } catch (e) {
+    showToast('✕ Bukan JSON valid: ' + e.message, 'error');
+  }
+}
+
+// Inti restore logic: validate + merge intelligent
+function applyRestore(backup) {
+  if (!backup || typeof backup !== 'object' || !backup.data) {
+    showToast('✕ Format backup tidak valid (missing "data" field)', 'error');
+    return;
+  }
+  if (backup.version && backup.version > BACKUP_VERSION) {
+    if (!confirm('⚠ Backup ini dari versi lebih baru (v' + backup.version + '). Lanjut restore? (mungkin tidak compatible)')) return;
+  }
+  // Konfirmasi user — kasih lihat statistik
+  const stats = countBackupEntries(backup.data);
+  const proceed = confirm(
+    'KONFIRMASI RESTORE\n\n' +
+    'Backup berisi:\n' +
+    '• ' + stats.guests + ' tamu\n' +
+    '• ' + stats.rsvps + ' RSVP\n' +
+    '• ' + stats.groups + ' cache rombongan\n' +
+    '• Penerima: ' + (stats.receiver || '(kosong)') + '\n\n' +
+    'Tanggal backup: ' + (backup.exportedAt || 'tidak diketahui') + '\n\n' +
+    'Data akan DIGABUNG (merge) dengan data lokal yang ada.\n' +
+    'Lanjut?'
+  );
+  if (!proceed) return;
+
+  let mergedGuests = 0, mergedRsvps = 0, mergedGroups = 0;
+  // 1) MERGE guests_cf — dedup by nama (case-insensitive)
+  if (backup.data.guests_cf) {
+    try {
+      const incoming = JSON.parse(backup.data.guests_cf);
+      const existing = JSON.parse(localStorage.getItem('guests_cf') || '[]');
+      const seen = new Set(existing.map(g => String((typeof g === 'string' ? g : g.name) || '').trim().toLowerCase()));
+      const newGuests = [];
+      (Array.isArray(incoming) ? incoming : []).forEach(g => {
+        const key = String((typeof g === 'string' ? g : g.name) || '').trim().toLowerCase();
+        if (key && !seen.has(key)) { newGuests.push(g); seen.add(key); }
+      });
+      const final = existing.concat(newGuests);
+      localStorage.setItem('guests_cf', JSON.stringify(final));
+      mergedGuests = newGuests.length;
+    } catch (e) { console.warn('Restore guests gagal:', e); }
+  }
+  // 2) MERGE rsvps_cf — dedup by nama + timestamp
+  if (backup.data.rsvps_cf) {
+    try {
+      const incoming = JSON.parse(backup.data.rsvps_cf);
+      const existing = JSON.parse(localStorage.getItem('rsvps_cf') || '[]');
+      const seen = new Set(existing.map(r => (r.timestamp || '') + '|' + String(r.name || '').trim().toLowerCase()));
+      const newRsvps = [];
+      (Array.isArray(incoming) ? incoming : []).forEach(r => {
+        const key = (r.timestamp || '') + '|' + String(r.name || '').trim().toLowerCase();
+        if (!seen.has(key)) { newRsvps.push(r); seen.add(key); }
+      });
+      const final = existing.concat(newRsvps);
+      localStorage.setItem('rsvps_cf', JSON.stringify(final));
+      mergedRsvps = newRsvps.length;
+    } catch (e) { console.warn('Restore rsvps gagal:', e); }
+  }
+  // 3) MERGE group_info_cache_cf — per group_id, take MAX counts (terbaru wins)
+  if (backup.data.group_info_cache_cf) {
+    try {
+      const incoming = JSON.parse(backup.data.group_info_cache_cf);
+      const existing = JSON.parse(localStorage.getItem('group_info_cache_cf') || '{}');
+      Object.keys(incoming || {}).forEach(gid => {
+        const inc = incoming[gid];
+        const cur = existing[gid];
+        if (!cur || (inc.totalClaimed || 0) > (cur.totalClaimed || 0)) {
+          existing[gid] = inc;
+          mergedGroups++;
+        }
+      });
+      localStorage.setItem('group_info_cache_cf', JSON.stringify(existing));
+    } catch (e) { console.warn('Restore group cache gagal:', e); }
+  }
+  // 4) REPLACE scanner_received_by_cf (kalau ada — backup biasanya lebih segar)
+  if (backup.data.scanner_received_by_cf) {
+    try { localStorage.setItem('scanner_received_by_cf', backup.data.scanner_received_by_cf); } catch {}
+  }
+  // Refresh UI
+  updateBackupStats();
+  if (typeof renderGuestLinks === 'function') renderGuestLinks();
+  if (typeof renderAdminRSVPs === 'function') renderAdminRSVPs();
+  if (typeof updateAdminStats === 'function') updateAdminStats();
+  if (typeof renderWishes === 'function') renderWishes();
+  const res = document.getElementById('backup-result');
+  if (res) {
+    res.innerHTML = `
+      <div style="background:#d4edda;border:1px solid #2d6a32;border-radius:5px;padding:10px 12px;color:#155724;font-size:12px;line-height:1.6">
+        <strong>✓ RESTORE BERHASIL</strong><br>
+        • ${mergedGuests} tamu baru di-merge (skip duplikat)<br>
+        • ${mergedRsvps} RSVP baru di-merge<br>
+        • ${mergedGroups} rombongan cache di-update<br>
+        • Penerima tamu: ${backup.data.scanner_received_by_cf ? '✓ di-restore' : '(tidak ada di backup)'}<br>
+        <em>Refresh halaman supaya semua data terbaru muncul di sheet integration.</em>
+      </div>
+    `;
+  }
+  showToast(`✓ Restore selesai — ${mergedGuests + mergedRsvps} entries baru`, 'success');
+}
+
+function countBackupEntries(data) {
+  let guests = 0, rsvps = 0, groups = 0, receiver = '';
+  try { guests = (JSON.parse(data.guests_cf || '[]')).length; } catch {}
+  try { rsvps = (JSON.parse(data.rsvps_cf || '[]')).length; } catch {}
+  try {
+    const gc = JSON.parse(data.group_info_cache_cf || '{}');
+    groups = Object.keys(gc).length;
+  } catch {}
+  receiver = data.scanner_received_by_cf || '';
+  return { guests, rsvps, groups, receiver };
 }
 
 /* =========================================================
