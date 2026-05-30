@@ -1414,6 +1414,21 @@ section {
   font-style: italic;
 }
 
+/* Label waktu relatif kapan ucapan dikirim */
+.wish-meta {
+  margin-top: 5px;
+  text-align: right;
+}
+.wish-time {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-size: 8.5px;
+  letter-spacing: 0.8px;
+  color: var(--sogan);
+  opacity: 0.7;
+  font-style: normal;
+}
+
 .wish-attendance {
   display: inline-block;
   font-family: 'Cinzel', serif;
@@ -7771,6 +7786,41 @@ function attendanceClass(a) {
   return '';
 }
 
+// Format waktu relatif Indonesia: "baru saja", "5 menit lalu", "3 jam lalu",
+// "2 hari lalu", "1 minggu lalu", lalu fallback ke tanggal absolut.
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  const then = new Date(ts).getTime();
+  if (isNaN(then)) return '';
+  const now = Date.now();
+  let diff = Math.floor((now - then) / 1000); // detik
+  if (diff < 0) diff = 0; // antisipasi clock skew (timestamp di masa depan)
+  if (diff < 45) return 'baru saja';
+  const mnt = Math.floor(diff / 60);
+  if (mnt < 60) return mnt + ' menit lalu';
+  const jam = Math.floor(mnt / 60);
+  if (jam < 24) return jam + ' jam lalu';
+  const hari = Math.floor(jam / 24);
+  if (hari < 7) return hari + ' hari lalu';
+  const minggu = Math.floor(hari / 7);
+  if (hari < 30) return minggu + ' minggu lalu';
+  // Lebih dari sebulan -> tampilkan tanggal absolut
+  const d = new Date(ts);
+  const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+// Format tanggal+jam lengkap (untuk tooltip hover)
+function formatFullDateTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  try {
+    return d.toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+  } catch {
+    return d.toLocaleString('id-ID');
+  }
+}
+
 function renderWishItem(w, sampleClass) {
   const cls = sampleClass || '';
   const badge = w.attendance
@@ -7782,6 +7832,12 @@ function renderWishItem(w, sampleClass) {
   const arrivedBadge = arrival
     ? `<span class="wish-arrived" title="Sudah scan QR pada ${escapeAttr(String(arrival.timestamp || ''))}">✓ HADIR</span>`
     : '';
+  // Label waktu relatif — hanya untuk wish asli (bukan contoh/sample) yg punya timestamp
+  const relTime = (!sampleClass && w.timestamp) ? formatRelativeTime(w.timestamp) : '';
+  const fullTime = (!sampleClass && w.timestamp) ? formatFullDateTime(w.timestamp) : '';
+  const timeHtml = relTime
+    ? `<span class="wish-time" title="${escapeAttr(fullTime)}">🕊 ${escapeHtml(relTime)}</span>`
+    : '';
   return `
     <div class="wish-item ${cls} ${arrival ? 'is-arrived' : ''}">
       <div class="wish-row">
@@ -7789,6 +7845,7 @@ function renderWishItem(w, sampleClass) {
         ${badge}
       </div>
       <p class="wish-text">"${escapeHtml(w.message)}"</p>
+      ${timeHtml ? `<div class="wish-meta">${timeHtml}</div>` : ''}
     </div>
   `;
 }
