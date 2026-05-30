@@ -10409,6 +10409,32 @@ function copyScannerUrl() {
 
 function shareScannerUrlWA() {
   const url = getScannerUrl();
+  // Cek status fitur walk-in (sinkron, dari toggle admin yg sudah ter-load / fallback ke content map)
+  // Disengaja TIDAK pakai await fetch supaya window.open tetap di dalam user-gesture (anti popup-block).
+  let walkinEnabled = false;
+  const walkinToggle = document.getElementById('walkin-enabled-toggle');
+  if (walkinToggle) {
+    walkinEnabled = walkinToggle.checked;
+  } else {
+    const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+    walkinEnabled = String(m['walkin.enabled'] || 'false').trim().toLowerCase() === 'true';
+  }
+  // Section khusus walk-in — hanya disisipkan kalau fitur aktif
+  const walkinSection = walkinEnabled
+    ? `
+━━━━━━━━━━━━━━━━━
+*D. TAMU TANPA UNDANGAN (Walk-in)* 🤝
+━━━━━━━━━━━━━━━━━
+Fitur ini *SEDANG AKTIF*. Untuk kasus tamu yang benar-benar lupa / tidak membawa undangan, namun layak dihormati (mis. keluarga jauh yang sudah memberi tanda kasih):
+
+1. Klik tombol *"🤝 Tamu Tanpa Undangan (Manual)"* di bawah layar scanner — ATAU scan *QR Walk-in* khusus dari admin.
+2. Isi *nama tamu*, pilih *kategori* (keluarga jauh, rekan, dll), dan *catatan* singkat (mis. "lupa bawa undangan, dari luar kota").
+3. *Centang kotak verifikasi* bahwa Anda memastikan tamu ini layak diberi souvenir.
+4. Klik *"Berikan Souvenir dengan Hormat"*.
+
+_Mohon dipakai dengan bijak & penuh perhatian — semua walk-in tercatat lengkap (nama, alasan, penerima) untuk audit pengantin. Kalau ragu, konfirmasi ke koordinator dulu._
+`
+    : '';
   const msg =
 `Halo! Terima kasih sudah bantu jadi *penerima tamu* di pernikahan *Cintya & Fathoni*. Berikut link scanner Anda:
 
@@ -10456,7 +10482,7 @@ Sistem otomatis tolak kalau:
 - Titipan untuk nama yang sudah dititipkan tamu lain
 
 Jangan paksa — ini sengaja, supaya 1 orang tidak dapat 2 souvenir. Kalau tamu protes, arahkan ke koordinator.
-
+${walkinSection}
 ━━━━━━━━━━━━━━━━━
 *PENTING — JAGA LINK INI*
 ━━━━━━━━━━━━━━━━━
