@@ -1388,50 +1388,42 @@ section {
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* Grid 2 kolom × 2 baris:
-   [nama]  [badge KEHADIRAN]
-   [pesan] [waktu]
-   Pesan tepat di bawah nama (kolom kiri), waktu tepat di bawah badge (kolom kanan).
-   Tidak ada gap kosong walau kolom kanan stack badge+waktu. */
+/* 2 kolom independen: kiri (nama+pesan, rapat) | kanan (badge+waktu).
+   Jarak nama->pesan dikontrol margin pesan saja, TIDAK terpengaruh tinggi badge. */
 .wish-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  column-gap: 8px;
-  row-gap: 1px;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wish-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.wish-side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
 }
 .wish-name {
-  grid-column: 1;
-  grid-row: 1;
+  display: block;
   font-family: 'Cinzel', serif;
   font-size: 10px;
   letter-spacing: 1.5px;
   color: var(--sogan-darkest);
   text-transform: uppercase;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wish-badge-cell {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-}
 .wish-text {
-  grid-column: 1;
-  grid-row: 2;
   font-size: 13.5px;
   color: var(--sogan-dark);
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   line-height: 1.45;
   font-style: italic;
-}
-.wish-time-cell {
-  grid-column: 2;
-  grid-row: 2;
-  justify-self: end;
-  align-self: start;
 }
 
 /* Label waktu relatif kapan ucapan dikirim — kecil, di bawah badge KEHADIRAN */
@@ -7856,15 +7848,16 @@ function renderWishItem(w, sampleClass) {
   const timeHtml = relTime
     ? `<span class="wish-time" title="${escapeAttr(fullTime)}">${escapeHtml(relTime)}</span>`
     : '';
-  // Layout grid 2 kolom × 2 baris: nama|badge (atas), pesan|waktu (bawah).
-  // Pesan langsung di bawah nama -> tidak ada gap kosong walau badge+waktu stack.
+  // 2 kolom independen: kiri (nama + pesan, rapat), kanan (badge + waktu).
+  // Tinggi badge TIDAK lagi mendorong jarak nama->pesan, jadi nama rapat ke pesan.
   return `
     <div class="wish-item ${cls} ${arrival ? 'is-arrived' : ''}">
       <div class="wish-grid">
-        <span class="wish-name">${escapeHtml(w.name)}${arrivedBadge}</span>
-        <span class="wish-badge-cell">${badge}</span>
-        <p class="wish-text">"${escapeHtml(w.message)}"</p>
-        <span class="wish-time-cell">${timeHtml}</span>
+        <div class="wish-main">
+          <span class="wish-name">${escapeHtml(w.name)}${arrivedBadge}</span>
+          <p class="wish-text">"${escapeHtml(w.message)}"</p>
+        </div>
+        <div class="wish-side">${badge}${timeHtml}</div>
       </div>
     </div>
   `;
