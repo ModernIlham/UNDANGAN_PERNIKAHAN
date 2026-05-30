@@ -1846,6 +1846,23 @@ html[data-scroll-dir="up"] .reveal-scale:not(.visible)  { transform: scale(1.12)
   margin: 14px 0 4px;
   font-family: 'Cormorant Garamond', serif;
 }
+.qris-download-btn {
+  margin-top: 12px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--sogan-dark), var(--sogan-darkest));
+  color: var(--emas-terang);
+  border: 1px solid var(--kuning-keemasan);
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.1s;
+  box-shadow: 0 3px 10px rgba(58, 32, 15, 0.25);
+}
+.qris-download-btn:hover { filter: brightness(1.12); }
+.qris-download-btn:active { transform: scale(0.97); }
 
 /* ===== QR TICKET BUTTON & MODAL ===== */
 .qr-ticket-btn {
@@ -5910,6 +5927,7 @@ img[src$="loading.svg"] {
       Scan QRIS di atas dengan aplikasi <strong>e-wallet</strong> (GoPay, OVO, DANA, ShopeePay, dll)
       atau <strong>mobile banking</strong> apapun yang mendukung QRIS.
     </p>
+    <button class="qris-download-btn" onclick="downloadQrisCard()">⬇ Simpan Kartu QRIS</button>
   </div>
 </div>
 
@@ -8427,6 +8445,153 @@ function hideQrisModal(event) {
         card.classList.add('is-flipped');
       }
     }, 200);
+  }
+}
+
+// Loader gambar dengan crossOrigin='anonymous' supaya canvas tidak tainted
+// (perlu untuk toDataURL). Reject kalau gagal.
+function loadImageCORS_(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Gagal load gambar (CORS / URL invalid)'));
+    img.src = src;
+  });
+}
+
+// Download kartu QRIS bertema undangan (frame emas, nama mempelai, logo QRIS,
+// gambar QRIS, nama bank + atas nama). Konsisten dgn kartu e-tiket.
+async function downloadQrisCard() {
+  const bank = _qrisCurrentBank;
+  const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+  const rawUrl = bank ? (m['gift.' + bank + '.qris_image'] || '') : '';
+  if (!rawUrl) { showToast('QRIS belum tersedia', 'error'); return; }
+  const qrisUrl = normalizeImageUrl(rawUrl);
+  const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+  const bankName = (m['gift.' + bank + '.name'] || '').toUpperCase();
+  const holder   = m['gift.' + bank + '.holder_label'] || '';
+  const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || '';
+
+  showToast('Membuat kartu QRIS…', 'info');
+
+  // Load gambar QRIS (CORS) — kalau gagal, fallback buka gambar mentah di tab baru
+  let qrisImg;
+  try {
+    qrisImg = await loadImageCORS_(qrisUrl);
+  } catch (e) {
+    showToast('⚠ Gambar QRIS tidak bisa diproses (CORS). Membuka gambar asli — tekan & tahan untuk simpan.', 'error');
+    try { window.open(qrisUrl, '_blank'); } catch {}
+    return;
+  }
+  // Logo QRIS (SVG same-origin → aman untuk canvas)
+  let logoImg = null;
+  try { logoImg = await loadImageCORS_('assets/qris-logo.svg'); } catch (e) { /* opsional */ }
+
+  // ===== Compose canvas (720 x 1040 portrait) =====
+  const W = 720, H = 1040;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  // Background gradient ivory -> cream
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#faf0d8');
+  grad.addColorStop(1, '#e8d4a8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Double frame emas + dot di 4 sudut
+  const GOLD = '#d4af64';
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 4; ctx.strokeRect(28, 28, W - 56, H - 56);
+  ctx.lineWidth = 1; ctx.strokeRect(40, 40, W - 80, H - 80);
+  ctx.fillStyle = GOLD;
+  [[28,28],[W-28,28],[28,H-28],[W-28,H-28]].forEach(([x,y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+  });
+
+  ctx.textAlign = 'center';
+  // Label "TANDA KASIH"
+  ctx.font = '600 22px Georgia, serif';
+  ctx.fillStyle = '#6b3d1c';
+  ctx.fillText('T A N D A   K A S I H', W / 2, 100);
+  // Nama mempelai (besar)
+  ctx.font = '700 50px Georgia, serif';
+  ctx.fillStyle = '#150a03';
+  ctx.fillText(coupleNames, W / 2, 158);
+  // Tanggal
+  if (eventDate) {
+    ctx.font = '500 20px Georgia, serif';
+    ctx.fillStyle = '#6b3d1c';
+    ctx.fillText(eventDate, W / 2, 196);
+  }
+  // Divider
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 80, 220); ctx.lineTo(W/2 - 12, 220);
+  ctx.moveTo(W/2 + 12, 220); ctx.lineTo(W/2 + 80, 220);
+  ctx.stroke();
+  ctx.fillStyle = GOLD;
+  ctx.beginPath(); ctx.arc(W/2, 220, 4, 0, Math.PI*2); ctx.fill();
+
+  // White rounded box untuk QRIS
+  const boxSize = 460;
+  const boxX = (W - boxSize) / 2;
+  const boxY = 260;
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
+  if (typeof roundRect === 'function') roundRect(ctx, boxX, boxY, boxSize, boxSize, 14);
+  else { ctx.beginPath(); ctx.rect(boxX, boxY, boxSize, boxSize); }
+  ctx.fill(); ctx.stroke();
+
+  // Draw QRIS image (fit contain di dalam box dgn padding)
+  const pad = 28;
+  const innerMax = boxSize - pad * 2;
+  let dw = qrisImg.width, dh = qrisImg.height;
+  if (dw && dh) {
+    const scale = Math.min(innerMax / dw, innerMax / dh);
+    dw = dw * scale; dh = dh * scale;
+  } else { dw = innerMax; dh = innerMax; }
+  ctx.drawImage(qrisImg, boxX + (boxSize - dw) / 2, boxY + (boxSize - dh) / 2, dw, dh);
+
+  // Logo QRIS kecil di bawah box
+  let yPos = boxY + boxSize + 46;
+  if (logoImg && logoImg.width) {
+    const lw = 130, lh = lw * (logoImg.height / logoImg.width || 0.37);
+    ctx.drawImage(logoImg, (W - lw) / 2, yPos - lh + 6, lw, lh);
+    yPos += 24;
+  }
+  // Nama bank + atas nama
+  if (bankName) {
+    ctx.font = '700 24px Georgia, serif';
+    ctx.fillStyle = '#150a03';
+    ctx.fillText(bankName, W / 2, yPos);
+    yPos += 30;
+  }
+  if (holder) {
+    ctx.font = 'italic 18px Georgia, serif';
+    ctx.fillStyle = '#6b3d1c';
+    ctx.fillText(holder, W / 2, yPos);
+    yPos += 30;
+  }
+  // Footer hint
+  ctx.font = 'italic 14px Georgia, serif';
+  ctx.fillStyle = '#8a5a2e';
+  ctx.fillText('Scan dengan e-wallet / m-banking apa pun', W / 2, H - 86);
+  ctx.fillText('yang mendukung QRIS', W / 2, H - 66);
+  // Tagline
+  ctx.font = '500 11px Georgia, serif';
+  ctx.fillStyle = GOLD;
+  ctx.fillText('WEDDING GIFT  ·  ' + coupleNames.toUpperCase(), W / 2, H - 44);
+
+  // Download (pakai helper yg handle UC Browser fallback)
+  try {
+    const safeBank = (bankName || bank).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    _downloadCanvasAsPng(cv, 'qris-' + safeBank + '.png');
+    if (isDownloadAttrSupported()) showToast('✓ Kartu QRIS tersimpan', 'success');
+  } catch (e) {
+    showToast('Gagal simpan kartu: ' + e.message, 'error');
   }
 }
 
