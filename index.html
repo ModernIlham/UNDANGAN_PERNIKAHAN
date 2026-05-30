@@ -8469,7 +8469,6 @@ async function downloadQrisCard() {
   if (!rawUrl) { showToast('QRIS belum tersedia', 'error'); return; }
   const qrisUrl = normalizeImageUrl(rawUrl);
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
-  const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || '';
 
   showToast('Membuat kartu QRIS…', 'info');
 
@@ -8513,30 +8512,24 @@ async function downloadQrisCard() {
   // Label "TANDA KASIH"
   ctx.font = '600 22px Georgia, serif';
   ctx.fillStyle = '#6b3d1c';
-  ctx.fillText('T A N D A   K A S I H', W / 2, 100);
-  // Nama mempelai (besar)
+  ctx.fillText('T A N D A   K A S I H', W / 2, 108);
+  // Nama mempelai (besar) — tanpa tanggal sesuai permintaan
   ctx.font = '700 50px Georgia, serif';
   ctx.fillStyle = '#150a03';
-  ctx.fillText(coupleNames, W / 2, 158);
-  // Tanggal
-  if (eventDate) {
-    ctx.font = '500 20px Georgia, serif';
-    ctx.fillStyle = '#6b3d1c';
-    ctx.fillText(eventDate, W / 2, 196);
-  }
+  ctx.fillText(coupleNames, W / 2, 168);
   // Divider
   ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(W/2 - 80, 220); ctx.lineTo(W/2 - 12, 220);
-  ctx.moveTo(W/2 + 12, 220); ctx.lineTo(W/2 + 80, 220);
+  ctx.moveTo(W/2 - 80, 198); ctx.lineTo(W/2 - 12, 198);
+  ctx.moveTo(W/2 + 12, 198); ctx.lineTo(W/2 + 80, 198);
   ctx.stroke();
   ctx.fillStyle = GOLD;
-  ctx.beginPath(); ctx.arc(W/2, 220, 4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W/2, 198, 4, 0, Math.PI*2); ctx.fill();
 
   // White rounded box untuk QRIS
-  const boxSize = 460;
+  const boxSize = 470;
   const boxX = (W - boxSize) / 2;
-  const boxY = 260;
+  const boxY = 250;
   ctx.fillStyle = '#fff';
   ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
   if (typeof roundRect === 'function') roundRect(ctx, boxX, boxY, boxSize, boxSize, 14);
