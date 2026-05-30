@@ -1388,38 +1388,50 @@ section {
   to { opacity: 1; transform: translateX(0); }
 }
 
-.wish-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-/* Kolom kanan: badge KEHADIRAN di atas, waktu kecil di bawahnya (hemat tempat) */
-.wish-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  flex: 0 0 auto;
+/* Grid 2 kolom × 2 baris:
+   [nama]  [badge KEHADIRAN]
+   [pesan] [waktu]
+   Pesan tepat di bawah nama (kolom kiri), waktu tepat di bawah badge (kolom kanan).
+   Tidak ada gap kosong walau kolom kanan stack badge+waktu. */
+.wish-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 8px;
+  row-gap: 1px;
+  align-items: start;
 }
 .wish-name {
+  grid-column: 1;
+  grid-row: 1;
   font-family: 'Cinzel', serif;
   font-size: 10px;
   letter-spacing: 1.5px;
   color: var(--sogan-darkest);
   text-transform: uppercase;
   min-width: 0;
-  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.wish-badge-cell {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
 .wish-text {
+  grid-column: 1;
+  grid-row: 2;
   font-size: 13.5px;
   color: var(--sogan-dark);
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   line-height: 1.45;
   font-style: italic;
+}
+.wish-time-cell {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+  align-self: start;
 }
 
 /* Label waktu relatif kapan ucapan dikirim — kecil, di bawah badge KEHADIRAN */
@@ -7837,19 +7849,23 @@ function renderWishItem(w, sampleClass) {
   const arrivedBadge = arrival
     ? `<span class="wish-arrived" title="Sudah scan QR pada ${escapeAttr(String(arrival.timestamp || ''))}">✓ HADIR</span>`
     : '';
-  // Label waktu relatif — hanya untuk wish asli (bukan contoh/sample) yg punya timestamp
+  // Label waktu relatif — hanya untuk wish asli (bukan contoh/sample) yg punya timestamp.
+  // Tanpa emoji (🕊 sering jadi kotak di font HP) — pakai teks polos saja.
   const relTime = (!sampleClass && w.timestamp) ? formatRelativeTime(w.timestamp) : '';
   const fullTime = (!sampleClass && w.timestamp) ? formatFullDateTime(w.timestamp) : '';
   const timeHtml = relTime
-    ? `<span class="wish-time" title="${escapeAttr(fullTime)}">🕊 ${escapeHtml(relTime)}</span>`
+    ? `<span class="wish-time" title="${escapeAttr(fullTime)}">${escapeHtml(relTime)}</span>`
     : '';
+  // Layout grid 2 kolom × 2 baris: nama|badge (atas), pesan|waktu (bawah).
+  // Pesan langsung di bawah nama -> tidak ada gap kosong walau badge+waktu stack.
   return `
     <div class="wish-item ${cls} ${arrival ? 'is-arrived' : ''}">
-      <div class="wish-row">
+      <div class="wish-grid">
         <span class="wish-name">${escapeHtml(w.name)}${arrivedBadge}</span>
-        <span class="wish-right">${badge}${timeHtml}</span>
+        <span class="wish-badge-cell">${badge}</span>
+        <p class="wish-text">"${escapeHtml(w.message)}"</p>
+        <span class="wish-time-cell">${timeHtml}</span>
       </div>
-      <p class="wish-text">"${escapeHtml(w.message)}"</p>
     </div>
   `;
 }
