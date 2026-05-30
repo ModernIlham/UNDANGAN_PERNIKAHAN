@@ -8469,8 +8469,6 @@ async function downloadQrisCard() {
   if (!rawUrl) { showToast('QRIS belum tersedia', 'error'); return; }
   const qrisUrl = normalizeImageUrl(rawUrl);
   const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
-  const bankName = (m['gift.' + bank + '.name'] || '').toUpperCase();
-  const holder   = m['gift.' + bank + '.holder_label'] || '';
   const eventDate = (typeof stripHtml === 'function' ? stripHtml(m['events.akad.date']) : '') || '';
 
   showToast('Membuat kartu QRIS…', 'info');
@@ -8555,28 +8553,14 @@ async function downloadQrisCard() {
   } else { dw = innerMax; dh = innerMax; }
   ctx.drawImage(qrisImg, boxX + (boxSize - dw) / 2, boxY + (boxSize - dh) / 2, dw, dh);
 
-  // Logo QRIS kecil di bawah box
-  let yPos = boxY + boxSize + 46;
+  // Logo QRIS di bawah box (tanpa info bank / atas nama — sesuai permintaan)
+  let yPos = boxY + boxSize + 60;
   if (logoImg && logoImg.width) {
-    const lw = 130, lh = lw * (logoImg.height / logoImg.width || 0.37);
-    ctx.drawImage(logoImg, (W - lw) / 2, yPos - lh + 6, lw, lh);
-    yPos += 24;
-  }
-  // Nama bank + atas nama
-  if (bankName) {
-    ctx.font = '700 24px Georgia, serif';
-    ctx.fillStyle = '#150a03';
-    ctx.fillText(bankName, W / 2, yPos);
-    yPos += 30;
-  }
-  if (holder) {
-    ctx.font = 'italic 18px Georgia, serif';
-    ctx.fillStyle = '#6b3d1c';
-    ctx.fillText(holder, W / 2, yPos);
-    yPos += 30;
+    const lw = 150, lh = lw * (logoImg.height / logoImg.width || 0.37);
+    ctx.drawImage(logoImg, (W - lw) / 2, yPos - lh, lw, lh);
   }
   // Footer hint
-  ctx.font = 'italic 14px Georgia, serif';
+  ctx.font = 'italic 15px Georgia, serif';
   ctx.fillStyle = '#8a5a2e';
   ctx.fillText('Scan dengan e-wallet / m-banking apa pun', W / 2, H - 86);
   ctx.fillText('yang mendukung QRIS', W / 2, H - 66);
@@ -8585,10 +8569,10 @@ async function downloadQrisCard() {
   ctx.fillStyle = GOLD;
   ctx.fillText('WEDDING GIFT  ·  ' + coupleNames.toUpperCase(), W / 2, H - 44);
 
-  // Download (pakai helper yg handle UC Browser fallback)
+  // Download (pakai helper yg handle UC Browser fallback). Nama file generik.
   try {
-    const safeBank = (bankName || bank).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    _downloadCanvasAsPng(cv, 'qris-' + safeBank + '.png');
+    const safeCouple = String(coupleNames).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    _downloadCanvasAsPng(cv, 'qris-' + (safeCouple || 'wedding') + '.png');
     if (isDownloadAttrSupported()) showToast('✓ Kartu QRIS tersimpan', 'success');
   } catch (e) {
     showToast('Gagal simpan kartu: ' + e.message, 'error');
