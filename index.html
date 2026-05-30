@@ -2311,6 +2311,68 @@ body.scanner-mode > #scanner-page {
   opacity: 0.6;
   margin-top: 16px;
 }
+
+/* WALK-IN — Tamu Tanpa Undangan */
+.scan-walkin-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #7a5fa8, #5a3a8f);
+  color: #fff;
+  border: 1px solid #b39ddb;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.scanner-walkin-panel {
+  background: linear-gradient(180deg, #f3edf9, #e5d9f3) !important;
+  border-color: #7a5fa8 !important;
+}
+.scanner-walkin-panel h3 { color: #3a2060 !important; }
+.walkin-care-note {
+  background: #fff;
+  border-left: 4px solid #7a5fa8;
+  padding: 9px 11px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #3a2060;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+.walkin-select, .walkin-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #b39ddb;
+  border-radius: 5px;
+  background: #fff;
+  color: #3a200f;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.walkin-textarea { resize: vertical; }
+.walkin-verify {
+  background: rgba(122, 95, 168, 0.12) !important;
+  border-color: #b39ddb !important;
+  color: #3a2060 !important;
+  align-items: flex-start !important;
+}
+.walkin-verify input { margin-top: 2px; }
+/* Admin toggle walk-in */
+.walkin-admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #3a2060;
+}
+.walkin-admin-toggle input[type="checkbox"] {
+  width: 20px; height: 20px; cursor: pointer; flex: 0 0 auto;
+}
 .scanner-footer a { color: var(--emas-terang); text-decoration: underline; }
 
 /* ===== WA MENU MODAL ===== */
@@ -2631,6 +2693,8 @@ body.scanner-mode > #scanner-page {
 .audit-stat-card.audit-stat-titipan .num { color: #856404; }
 .audit-stat-card.audit-stat-override { background: #fbe7e7; border-color: #c47864; }
 .audit-stat-card.audit-stat-override .num { color: #7a3325; }
+.audit-stat-card.audit-stat-walkin { background: #f3edf9; border-color: #7a5fa8; }
+.audit-stat-card.audit-stat-walkin .num { color: #3a2060; }
 .audit-stat-card.audit-stat-total { background: #d4edda; border-color: #2d6a32; }
 .audit-stat-card.audit-stat-total .num { color: #155724; }
 
@@ -2705,6 +2769,7 @@ body.scanner-mode > #scanner-page {
 .audit-row .row-badge.is-hadir    { background: #d4edda; color: #155724; border: 1px solid #6db86d; }
 .audit-row .row-badge.is-titipan  { background: #fff3cd; color: #856404; border: 1px solid #d2a857; }
 .audit-row .row-badge.is-override { background: #fbe7e7; color: #7a3325; border: 1px solid #c47864; }
+.audit-row .row-badge.is-walkin   { background: #f3edf9; color: #3a2060; border: 1px solid #b39ddb; }
 .audit-row .row-meta {
   display: block;
   font-size: 10.5px;
@@ -5111,6 +5176,38 @@ img[src$="loading.svg"] {
     <div id="backup-result" style="margin-top:10px;font-size:11.5px"></div>
   </div>
 
+  <!-- WALK-IN / TAMU TANPA UNDANGAN -->
+  <div class="admin-section" style="border:2px solid #7a5fa8;background:linear-gradient(180deg,#f3edf9,#e5d9f3)">
+    <h3 style="color:#3a2060">🤝 TAMU TANPA UNDANGAN (Walk-in)</h3>
+    <p style="font-size:12px;color:#3a2060;margin-bottom:10px;line-height:1.5">
+      Fitur khusus untuk kasus lapangan: tamu yang <strong>benar-benar lupa membawa undangan</strong> / tidak punya undangan digital, namun layak dihormati (mis. keluarga jauh yang sudah memberi tanda kasih).
+      Penerima tamu bisa mencatat secara manual — <strong>fleksibel, tapi tetap terdata penuh untuk audit</strong>.
+    </p>
+
+    <!-- TOGGLE AKTIF/NONAKTIF -->
+    <div style="background:#fff;border:1px solid #b39ddb;border-radius:6px;padding:12px;margin-bottom:12px">
+      <label class="walkin-admin-toggle">
+        <input type="checkbox" id="walkin-enabled-toggle" onchange="toggleWalkinEnabled()">
+        <span id="walkin-toggle-label">Memuat status…</span>
+      </label>
+      <p style="font-size:11px;color:#6a4a8f;margin:8px 0 0;line-height:1.5">
+        Saat <strong>nonaktif</strong>, penerima tamu tidak bisa pakai fitur ini (tombol & QR walk-in tidak berfungsi). Aktifkan hanya kalau memang mengizinkan kebijakan tamu tanpa undangan.
+      </p>
+      <div id="walkin-toggle-result" style="margin-top:8px;font-size:11.5px"></div>
+    </div>
+
+    <!-- GENERATE UNIVERSAL QR -->
+    <strong style="font-size:11px;color:#3a2060;letter-spacing:1px;display:block;margin-bottom:6px">📷 QR UNIVERSAL WALK-IN (khusus penerima tamu)</strong>
+    <p style="font-size:11px;color:#7a3d00;background:#fff8e1;padding:6px 8px;border-radius:4px;border-left:3px solid #d2a857;margin-bottom:8px;line-height:1.5">
+      ⚠ QR ini <strong>hanya untuk staff penerima tamu</strong>. Scan QR ini saat ada kasus tamu tanpa undangan → muncul form manual. Jangan sebar ke tamu.
+    </p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="add-btn" onclick="generateWalkinQR()" style="flex:1;min-width:150px;background:linear-gradient(135deg,#7a5fa8,#5a3a8f)">⬇ Download QR Walk-in</button>
+      <button class="add-btn" onclick="viewWalkinList()" style="flex:1;min-width:150px;background:linear-gradient(135deg,#5a3a8f,#3a2060)">👥 Lihat Daftar Walk-in</button>
+    </div>
+    <div id="walkin-admin-result" style="margin-top:8px;font-size:11.5px"></div>
+  </div>
+
   <!-- ROMBONGAN / GROUP QR -->
   <div class="admin-section" style="border:2px solid #b88746;background:linear-gradient(180deg,#fff7e6,#fdebc9)">
     <h3 style="color:#6b3d1c">👥 MANAJEMEN ROMBONGAN (Group QR)</h3>
@@ -5203,6 +5300,10 @@ img[src$="loading.svg"] {
         <div class="num" id="audit-stat-titipan">0</div>
         <div class="lbl">TITIPAN<br>TERCATAT</div>
       </div>
+      <div class="audit-stat-card audit-stat-walkin">
+        <div class="num" id="audit-stat-walkin">0</div>
+        <div class="lbl">TAMU TANPA<br>UNDANGAN</div>
+      </div>
       <div class="audit-stat-card audit-stat-override">
         <div class="num" id="audit-stat-override">0</div>
         <div class="lbl">OVERRIDE<br>EVENT</div>
@@ -5221,6 +5322,7 @@ img[src$="loading.svg"] {
         <option value="personal">Personal QR</option>
         <option value="hadir">Group Hadir</option>
         <option value="titipan">Group Titipan</option>
+        <option value="walkin">Tamu Tanpa Undangan</option>
       </select>
       <select class="admin-select" id="audit-filter-group" onchange="renderAttendanceAudit()" style="flex:0 0 150px">
         <option value="">Semua Rombongan</option>
@@ -5867,9 +5969,14 @@ img[src$="loading.svg"] {
     </div>
     <div id="qr-reader"></div>
     <div id="scan-result" class="scan-result"></div>
-    <!-- Container untuk group panel (dynamic, hanya muncul saat scan QR rombongan) -->
+    <!-- Container untuk group panel (dynamic, hanya muncul saat scan QR rombongan / walk-in) -->
     <div id="scanner-group-container"></div>
     <button onclick="resetScanner()" class="scan-reset-btn">Scan Lagi</button>
+    <!-- Tombol khusus Tamu Tanpa Undangan — hanya muncul kalau fitur walk-in diaktifkan admin -->
+    <div id="scanner-walkin-btn-wrap" style="display:none;margin-top:10px">
+      <button onclick="handleWalkinScanned()" class="scan-walkin-btn">🤝 Tamu Tanpa Undangan (Manual)</button>
+      <p style="font-size:10.5px;color:rgba(232,212,168,0.65);margin:6px 0 0;line-height:1.4">Khusus kasus tamu yang benar-benar lupa/tidak punya undangan namun layak dihormati.</p>
+    </div>
     <p class="scanner-footer">Mode Scanner · <a href="?">kembali ke undangan</a></p>
   </div>
 </div>
@@ -6000,13 +6107,14 @@ img[src$="loading.svg"] {
    // Schema Attendance v2 — 11 kolom (5 lama + 6 baru untuk fitur group + titipan).
    // ATTENDANCE_COLS digunakan oleh ensureAttendanceHeader_ untuk auto-migrasi sheet
    // existing (kolom hilang akan auto-ditambahkan saat redeem berikutnya, data lama aman).
+   // 'note' = kolom serbaguna (dipakai walk-in untuk kategori + alasan tamu tanpa undangan)
    const ATTENDANCE_COLS = ['token','name','session','registered_at','redeemed_at',
-                            'group_id','name_input','type','titipan_untuk','received_by','is_override'];
+                            'group_id','name_input','type','titipan_untuk','received_by','is_override','note'];
    function setupAttendanceSheet_(ss) {
      let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
      ensureAttendanceHeader_(sh);
      // Atur lebar kolom sekali saat setup
-     const widths = [140, 240, 100, 160, 160, 160, 200, 90, 200, 160, 90];
+     const widths = [140, 240, 100, 160, 160, 160, 200, 90, 200, 160, 90, 260];
      widths.forEach((w, i) => sh.setColumnWidth(i + 1, w));
    }
    function ensureAttendanceHeader_(sh) {
@@ -6125,6 +6233,22 @@ img[src$="loading.svg"] {
          warn_double_claim: String(params.warn_double_claim || 'true').toLowerCase() !== 'false',
          notes: params.notes, key: params.key
        });
+     }
+     // === WALK-IN (Tamu Tanpa Undangan) ENDPOINTS ===
+     // Cek status fitur walk-in (aktif/nonaktif) + jumlah walk-in sudah tercatat
+     if (params.action === 'getWalkinConfig') {
+       return getWalkinConfig(params.key);
+     }
+     // Catat 1 tamu walk-in (tanpa undangan) ke Attendance type=walkin
+     if (params.action === 'redeemWalkin') {
+       return redeemWalkin({
+         name_input: params.name_input, category: params.category,
+         note: params.note, received_by: params.received_by, key: params.key
+       });
+     }
+     // Admin: aktifkan/nonaktifkan fitur walk-in
+     if (params.action === 'setWalkinEnabled') {
+       return setWalkinEnabled(String(params.enabled || '').toLowerCase() === 'true', params.key);
      }
      // Default: return konten + galeri + attendance + rsvp + groups (untuk admin & buku tamu)
      const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -6487,6 +6611,91 @@ img[src$="loading.svg"] {
      return jsonOut_({ success: true, created: true, group_id: p.group_id });
    }
 
+   // ============ WALK-IN ENDPOINTS (Tamu Tanpa Undangan — fleksibel tapi terdata) ============
+   const WALKIN_GROUP_ID = '__walkin__';
+   function isWalkinEnabled_(ss) {
+     const v = getContentValue_(ss, 'walkin.enabled');
+     return String(v == null ? 'false' : v).trim().toLowerCase() === 'true';
+   }
+   // GET /exec?action=getWalkinConfig&key=<scanner_key>
+   function getWalkinConfig(key) {
+     if (!key || key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     const enabled = isWalkinEnabled_(ss);
+     const note = getContentValue_(ss, 'walkin.note') || '';
+     // Hitung walk-in yg sudah tercatat + ambil list terbaru
+     const { rows } = readAttendance_(ss);
+     const walkins = rows.filter(r => String(r.type || '').toLowerCase() === 'walkin')
+       .map(r => ({
+         name_input: r.name_input || '',
+         category: r.titipan_untuk || '',
+         note: r.note || '',
+         received_by: r.received_by || '',
+         timestamp: r.redeemed_at ? new Date(r.redeemed_at).toISOString() : ''
+       }))
+       .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+     return jsonOut_({
+       success: true, enabled: enabled, note: note,
+       count: walkins.length, walkins: walkins.slice(0, 50)
+     });
+   }
+   // GET /exec?action=redeemWalkin&name_input=<nama>&category=<...>&note=<...>&received_by=<...>&key=<...>
+   function redeemWalkin(p) {
+     if (!p.key || p.key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     if (!isWalkinEnabled_(ss)) {
+       return jsonOut_({ success: false, disabled: true,
+         error: 'Fitur Tamu Tanpa Undangan sedang NONAKTIF. Aktifkan dulu di panel admin.' });
+     }
+     if (!p.name_input || !String(p.name_input).trim()) {
+       return jsonOut_({ success: false, error: 'Nama tamu wajib diisi' });
+     }
+     let sh = ss.getSheetByName('Attendance') || ss.insertSheet('Attendance');
+     ensureAttendanceHeader_(sh);
+     const now = new Date();
+     // Gabung kategori + alasan ke kolom note untuk audit lengkap
+     const category = String(p.category || '').trim();
+     const reason = String(p.note || '').trim();
+     const fullNote = (category ? '[' + category + '] ' : '') + reason;
+     appendRowByHeader_(sh, {
+       'token':         WALKIN_GROUP_ID,
+       'name':          'Tamu Tanpa Undangan',
+       'session':       '',
+       'registered_at': now,
+       'redeemed_at':   now,
+       'group_id':      WALKIN_GROUP_ID,
+       'name_input':    String(p.name_input).trim(),
+       'type':          'walkin',
+       'titipan_untuk': category,    // simpan kategori di kolom titipan_untuk
+       'received_by':   String(p.received_by || '').trim(),
+       'is_override':   false,
+       'note':          fullNote
+     });
+     SpreadsheetApp.flush();
+     // Hitung total walk-in setelah penambahan
+     const { rows } = readAttendance_(ss);
+     const total = rows.filter(r => String(r.type || '').toLowerCase() === 'walkin').length;
+     return jsonOut_({
+       success: true,
+       slot: {
+         name_input: String(p.name_input).trim(),
+         category: category,
+         note: reason,
+         received_by: p.received_by || '',
+         timestamp: now.toISOString()
+       },
+       totalWalkin: total
+     });
+   }
+   // GET /exec?action=setWalkinEnabled&enabled=true|false&key=<scanner_key>
+   function setWalkinEnabled(enabled, key) {
+     if (!key || key !== SCANNER_KEY) return jsonOut_({ success: false, error: 'Unauthorized' });
+     const ss = SpreadsheetApp.getActiveSpreadsheet();
+     setContentValue_(ss, 'walkin.enabled', enabled ? 'true' : 'false');
+     SpreadsheetApp.flush();
+     return jsonOut_({ success: true, enabled: enabled });
+   }
+
    // ============ SHEET HELPERS (formatCell handle waktu & tanggal) ============
    function formatCell_(v) {
      // Sheets quirk:
@@ -6517,6 +6726,29 @@ img[src$="loading.svg"] {
        if (k) o[k] = formatCell_(r[i][1]);
      }
      return o;
+   }
+   // Get single Content value by key (return null kalau tidak ada)
+   function getContentValue_(ss, key) {
+     const sh = ss.getSheetByName('Content');
+     if (!sh) return null;
+     const r = sh.getDataRange().getValues();
+     for (let i = 1; i < r.length; i++) {
+       if (String(r[i][0]||'').trim() === key) return r[i][1];
+     }
+     return null;
+   }
+   // Set single Content value by key. Kalau key belum ada, append baris baru.
+   function setContentValue_(ss, key, value) {
+     let sh = ss.getSheetByName('Content');
+     if (!sh) { sh = ss.insertSheet('Content'); sh.appendRow(['key','value']); }
+     const r = sh.getDataRange().getValues();
+     for (let i = 1; i < r.length; i++) {
+       if (String(r[i][0]||'').trim() === key) {
+         sh.getRange(i + 1, 2).setValue(value);
+         return;
+       }
+     }
+     sh.appendRow([key, value]);
    }
    function sheetToArray(sh) {
      if (!sh) return [];
@@ -6607,6 +6839,10 @@ img[src$="loading.svg"] {
        ['session_labels.sesi_2', 'Resepsi Sesi 2 - Tamu Undangan (20:00 - 21:00 WIB)'],
        ['session_labels.sesi_3', 'Resepsi Sesi 3 - Tamu Undangan'],
        ['session_labels.akad_resepsi', 'Akad + Resepsi (Acara Penuh)'],
+       // === WALK-IN (Tamu Tanpa Undangan) — fitur manual penerima tamu ===
+       // 'true' = aktif, 'false' = nonaktif. Toggle dari admin panel atau edit di sini.
+       ['walkin.enabled', 'false'],
+       ['walkin.note', 'Untuk tamu yang benar-benar lupa membawa undangan / tidak punya undangan digital, namun layak dihormati (mis. keluarga jauh yang sudah memberi tanda kasih).'],
        ['gallery.section_label', 'OUR MOMENTS'],
        ['gallery.section_title', 'Galeri Kenangan'],
        ['gallery.quote', '"A moment is better when shared with you."'],
@@ -6764,7 +7000,8 @@ async function loadSheetContent() {
       type: row.type || '',
       titipan_untuk: row.titipan_untuk || '',
       received_by: row.received_by || '',
-      is_override: row.is_override === true || String(row.is_override).toLowerCase() === 'true'
+      is_override: row.is_override === true || String(row.is_override).toLowerCase() === 'true',
+      note: row.note || ''
     }));
     SHEET_ATTENDANCE_LIST.forEach(row => {
       const gid = String(row.group_id || '').trim();
@@ -7673,6 +7910,7 @@ function openAdmin() {
   renderAttendanceAudit();     // Render audit log dari cache
   refreshGroupsList(true);     // Lalu fetch fresh dari sheet (background) — akan trigger ulang
   if (typeof updateBackupStats === 'function') updateBackupStats();  // Update statistik backup
+  if (typeof loadWalkinAdminStatus === 'function') loadWalkinAdminStatus();  // Status walk-in
 }
 
 function closeAdmin() {
@@ -9083,16 +9321,21 @@ async function initScannerMode(providedKey) {
     document.getElementById('qr-reader').innerHTML = '<p style="color:#fff;padding:20px">Gagal load scanner library. Cek koneksi internet.</p>';
     return;
   }
-  // Cek URL params untuk auto-validate (token personal atau group QR)
+  // Cek URL params untuk auto-validate (token personal, group QR, atau walk-in)
   const params = new URLSearchParams(location.search);
+  const walkinFromUrl = params.get('walkin');
   const groupFromUrl = params.get('group');
   const tokenFromUrl = params.get('t');
   const nameFromUrl  = params.get('n') ? decodeURIComponent(params.get('n')) : '';
-  if (groupFromUrl) {
+  if (walkinFromUrl) {
+    handleWalkinScanned();
+  } else if (groupFromUrl) {
     handleGroupScanned(groupFromUrl);
   } else if (tokenFromUrl) {
     handleScannedData(tokenFromUrl, nameFromUrl);
   }
+  // Cek apakah fitur walk-in aktif → tampilkan tombol khusus di scanner
+  refreshWalkinButton();
   startCameraScanner();
 }
 
@@ -9168,8 +9411,10 @@ function startCameraScanner() {
       _scannerInstance.pause(true);
       // Parse URL — deteksi mode: group rombongan vs personal QR
       let token = '', name = '', groupId = '';
+      let walkin = '';
       try {
         const u = new URL(decodedText);
+        walkin  = u.searchParams.get('walkin') || '';
         groupId = u.searchParams.get('group') || '';
         token   = u.searchParams.get('t') || '';
         name    = decodeURIComponent(u.searchParams.get('n') || '');
@@ -9178,7 +9423,9 @@ function startCameraScanner() {
         token = decodedText;
       }
       // Route ke handler yang sesuai
-      if (groupId) {
+      if (walkin) {
+        handleWalkinScanned();
+      } else if (groupId) {
         handleGroupScanned(groupId);
       } else {
         handleScannedData(token, name);
@@ -9198,6 +9445,177 @@ function resetScanner() {
   if (grpContainer) grpContainer.innerHTML = '';
   if (_scannerInstance) {
     try { _scannerInstance.resume(); } catch (e) {}
+  }
+}
+
+/* =========================================================
+   WALK-IN — Tamu Tanpa Undangan (manual, fleksibel tapi terdata)
+   Untuk kasus tamu yg benar2 lupa bawa undangan / tdk punya undangan
+   digital, tapi layak dihormati (keluarga jauh, sudah memberi kado).
+   Gated 2 lapis: (1) scanner key, (2) walkin.enabled di setting.
+   ========================================================= */
+let _walkinConfigCache = null;
+
+// Cek status walk-in dari server (fresh), lalu tampilkan/sembunyikan tombol khusus
+async function refreshWalkinButton() {
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  const btnWrap = document.getElementById('scanner-walkin-btn-wrap');
+  if (!baseUrl) return;
+  try {
+    const url = baseUrl + '?action=getWalkinConfig&key=' + encodeURIComponent(_scannerActiveKey || '')
+              + '&_t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    _walkinConfigCache = json;
+    if (btnWrap) btnWrap.style.display = (json.success && json.enabled) ? 'block' : 'none';
+  } catch (e) {
+    if (btnWrap) btnWrap.style.display = 'none';
+  }
+}
+
+// Buka form walk-in (dari scan QR walk-in ATAU klik tombol khusus)
+async function handleWalkinScanned() {
+  showScanResult('warning', '<em>Memeriksa fitur Tamu Tanpa Undangan…</em>');
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) {
+    showScanResult('error', '<strong>Spreadsheet belum dikonfigurasi.</strong>');
+    return;
+  }
+  try {
+    const url = baseUrl + '?action=getWalkinConfig&key=' + encodeURIComponent(_scannerActiveKey || '')
+              + '&_t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (!json.success) {
+      showScanResult('error', `<strong>✗ ${escapeHtml(json.error || 'Gagal')}</strong>`);
+      return;
+    }
+    _walkinConfigCache = json;
+    if (!json.enabled) {
+      showScanResult('warning',
+        `<strong>⚠ Fitur Tamu Tanpa Undangan NONAKTIF</strong><br>` +
+        `Fitur ini sedang dimatikan. Hubungi koordinator / admin untuk mengaktifkan kalau memang ada kasus khusus.`);
+      return;
+    }
+    showScanResult('', '');
+    renderWalkinPanel(json);
+  } catch (err) {
+    showScanResult('error', `<strong>✗ Network error</strong><br>${escapeHtml(err.message)}`);
+  }
+}
+
+function renderWalkinPanel(config) {
+  const container = document.getElementById('scanner-group-container');
+  if (!container) return;
+  const note = config.note || '';
+  const count = config.count || 0;
+  // List walk-in terakhir (max 8 ditampilkan)
+  const recentHtml = (config.walkins && config.walkins.length)
+    ? config.walkins.slice(0, 8).map(w => {
+        const cat = w.category ? ` <span style="opacity:.7">(${escapeHtml(w.category)})</span>` : '';
+        return `<span class="pill">${escapeHtml(w.name_input)}${cat}</span>`;
+      }).join(' ')
+    : '<em style="color:#888">Belum ada tamu tanpa undangan tercatat.</em>';
+
+  container.innerHTML = `
+    <div class="scanner-group-panel scanner-walkin-panel">
+      <h3>🤝 TAMU TANPA UNDANGAN</h3>
+      <div class="walkin-care-note">${escapeHtml(note)}</div>
+      <div class="scanner-group-counter">
+        <div class="stat"><div class="num">${count}</div><div class="lbl">Sudah Tercatat</div></div>
+      </div>
+      ${count > 0 ? `<div class="scanner-attended-summary"><strong>Terakhir dicatat:</strong><br>${recentHtml}</div>` : ''}
+
+      <form class="scanner-group-form" onsubmit="submitWalkin(event); return false;">
+        <input type="text" id="walkin-name" placeholder="Nama tamu (wajib)…" autocomplete="off" required>
+        <select id="walkin-category" class="walkin-select">
+          <option value="">— Pilih kategori (opsional) —</option>
+          <option value="Keluarga">Keluarga</option>
+          <option value="Keluarga Jauh">Keluarga / Kerabat Jauh</option>
+          <option value="Rekan Kerja">Rekan Kerja</option>
+          <option value="Teman">Teman</option>
+          <option value="Tetangga">Tetangga</option>
+          <option value="Tamu Kehormatan">Tamu Kehormatan</option>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+        <textarea id="walkin-note" rows="2" placeholder="Catatan / alasan (opsional, mis: lupa bawa undangan, datang dari luar kota, sudah memberi kado)" class="walkin-textarea"></textarea>
+        <label class="scanner-titipan-toggle walkin-verify">
+          <input type="checkbox" id="walkin-verify">
+          <span>Saya (penerima tamu) memverifikasi tamu ini layak menerima souvenir</span>
+        </label>
+        <div id="walkin-banner"></div>
+        <div class="scanner-group-actions">
+          <button type="button" class="btn-cancel" onclick="cancelWalkin()">Batal</button>
+          <button type="submit" class="btn-confirm" id="walkin-submit">✓ Berikan Souvenir dengan Hormat</button>
+        </div>
+      </form>
+    </div>
+  `;
+  setTimeout(() => document.getElementById('walkin-name')?.focus(), 50);
+}
+
+function cancelWalkin() {
+  const container = document.getElementById('scanner-group-container');
+  if (container) container.innerHTML = '';
+  showScanResult('', '');
+  if (_scannerInstance) {
+    try { _scannerInstance.resume(); } catch (e) {}
+  }
+}
+
+async function submitWalkin(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const baseUrl = CONFIG.SHEET_DATA_URL || CONFIG.GOOGLE_SCRIPT_URL;
+  if (!baseUrl) return;
+  const name     = (document.getElementById('walkin-name')?.value || '').trim();
+  const category = (document.getElementById('walkin-category')?.value || '').trim();
+  const note     = (document.getElementById('walkin-note')?.value || '').trim();
+  const verified = document.getElementById('walkin-verify')?.checked || false;
+  const receivedBy = getReceiverName();
+
+  if (!name) {
+    showToast('Nama tamu wajib diisi', 'error');
+    document.getElementById('walkin-name')?.focus();
+    return;
+  }
+  // "Penuh perhatian" gate — verifikasi penerima tamu wajib dicentang
+  if (!verified) {
+    const banner = document.getElementById('walkin-banner');
+    if (banner) banner.innerHTML = `<div class="scanner-confirm-banner"><strong>⚠ Mohon centang verifikasi</strong><br>Sebagai bentuk tanggung jawab, centang dulu kotak verifikasi bahwa tamu ini layak diberi souvenir.</div>`;
+    return;
+  }
+
+  const btn = document.getElementById('walkin-submit');
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'MENCATAT…'; }
+
+  try {
+    const url = baseUrl
+      + '?action=redeemWalkin'
+      + '&name_input=' + encodeURIComponent(name)
+      + '&category=' + encodeURIComponent(category)
+      + '&note=' + encodeURIComponent(note)
+      + '&received_by=' + encodeURIComponent(receivedBy || '')
+      + '&key=' + encodeURIComponent(_scannerActiveKey || '')
+      + '&_t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (!json.success) {
+      if (json.disabled) {
+        showToast('✕ Fitur walk-in sudah dinonaktifkan admin.', 'error');
+        cancelWalkin();
+      } else {
+        showToast('✕ ' + (json.error || 'Gagal mencatat'), 'error');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      return;
+    }
+    showToast(`✓ "${name}" tercatat sebagai tamu tanpa undangan. Berikan souvenir dengan hormat 🤝`, 'success');
+    // Re-render panel dgn data terbaru (counter naik)
+    await handleWalkinScanned();
+  } catch (err) {
+    showToast('✕ Network: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
   }
 }
 
@@ -10322,6 +10740,157 @@ async function generateGroupQR(groupId) {
   }
 }
 
+/* =========================================================
+   WALK-IN ADMIN — toggle on/off + generate universal QR + lihat daftar
+   ========================================================= */
+// URL QR universal walk-in. Saat discan scanner (yg sudah auth) → buka form walk-in.
+function getWalkinScanUrl() {
+  const base = location.origin + location.pathname;
+  const key = (CONFIG && CONFIG.scannerKey) || '';
+  return base + '?mode=scan&walkin=1&key=' + encodeURIComponent(key);
+}
+
+// Load status walk-in dari server saat admin panel dibuka
+async function loadWalkinAdminStatus() {
+  const label = document.getElementById('walkin-toggle-label');
+  const toggle = document.getElementById('walkin-enabled-toggle');
+  const baseUrl = CONFIG.GOOGLE_SCRIPT_URL || CONFIG.SHEET_DATA_URL;
+  if (!baseUrl || !label) return;
+  try {
+    const url = baseUrl + '?action=getWalkinConfig&key=' + encodeURIComponent(CONFIG.scannerKey || '')
+              + '&_t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.success) {
+      if (toggle) toggle.checked = !!json.enabled;
+      label.innerHTML = json.enabled
+        ? '<strong style="color:#2d6a32">● AKTIF</strong> — penerima tamu bisa catat tamu tanpa undangan'
+        : '<strong style="color:#a04040">○ NONAKTIF</strong> — fitur walk-in dimatikan';
+    } else {
+      label.innerHTML = '<span style="color:#a04040">Gagal load status: ' + escapeHtml(json.error || '') + '</span>';
+    }
+  } catch (e) {
+    label.innerHTML = '<span style="color:#a04040">Gagal hubungi server (cek koneksi / redeploy Apps Script)</span>';
+  }
+}
+
+async function toggleWalkinEnabled() {
+  const toggle = document.getElementById('walkin-enabled-toggle');
+  const result = document.getElementById('walkin-toggle-result');
+  const baseUrl = CONFIG.GOOGLE_SCRIPT_URL || CONFIG.SHEET_DATA_URL;
+  if (!toggle || !baseUrl) return;
+  const enabled = toggle.checked;
+  if (result) result.innerHTML = '<em style="color:#888">⏳ Menyimpan…</em>';
+  try {
+    const url = baseUrl + '?action=setWalkinEnabled&enabled=' + (enabled ? 'true' : 'false')
+              + '&key=' + encodeURIComponent(CONFIG.scannerKey || '') + '&_t=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    if (json.success) {
+      if (result) result.innerHTML = `<span style="color:#155724">✓ Fitur walk-in ${enabled ? 'DIAKTIFKAN' : 'dinonaktifkan'}.</span>`;
+      loadWalkinAdminStatus();
+      showToast(`✓ Walk-in ${enabled ? 'aktif' : 'nonaktif'}`, 'success');
+    } else {
+      if (result) result.innerHTML = `<span style="color:#a04040">✗ ${escapeHtml(json.error || 'gagal')}</span>`;
+      toggle.checked = !enabled; // revert
+    }
+  } catch (e) {
+    if (result) result.innerHTML = `<span style="color:#a04040">✗ Network error: ${escapeHtml(e.message)}</span>`;
+    toggle.checked = !enabled;
+  }
+}
+
+// Generate + download QR universal walk-in (canvas card)
+async function generateWalkinQR() {
+  if (typeof qrcode === 'undefined') { showToast('QR library belum ter-load', 'error'); return; }
+  try {
+    showToast('Membuat QR walk-in…', 'info');
+    const qrUrl = getWalkinScanUrl();
+    const qr = qrcode(0, 'M');
+    qr.addData(qrUrl);
+    qr.make();
+    const qrDataUrl = qr.createDataURL(10, 0);
+    const m = (typeof SHEET_CONTENT_MAP === 'object' && SHEET_CONTENT_MAP) ? SHEET_CONTENT_MAP : {};
+    const coupleNames = m['cover.names'] || 'Cintya & Fathoni';
+
+    const W = 720, H = 1000;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#f3edf9'); grad.addColorStop(1, '#e5d9f3');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+    const PURPLE = '#5a3a8f';
+    ctx.strokeStyle = PURPLE;
+    ctx.lineWidth = 4; ctx.strokeRect(28, 28, W-56, H-56);
+    ctx.lineWidth = 1; ctx.strokeRect(40, 40, W-80, H-80);
+    ctx.fillStyle = PURPLE;
+    [[28,28],[W-28,28],[28,H-28],[W-28,H-28]].forEach(([x,y]) => {
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.textAlign = 'center';
+    ctx.font = '600 24px Georgia, serif'; ctx.fillStyle = '#3a2060';
+    ctx.fillText('Q R   W A L K - I N', W/2, 110);
+    ctx.font = '700 34px "Cinzel", Georgia, serif'; ctx.fillStyle = '#3a2060';
+    ctx.fillText(coupleNames, W/2, 162);
+    ctx.fillStyle = PURPLE; ctx.fillRect(W/2 - 50, 182, 100, 2);
+    ctx.font = '700 26px Georgia, serif'; ctx.fillStyle = '#3a2060';
+    ctx.fillText('TAMU TANPA UNDANGAN', W/2, 225);
+
+    const qrImg = await loadImage_(qrDataUrl);
+    const QS = 420;
+    ctx.drawImage(qrImg, (W - QS) / 2, 270, QS, QS);
+
+    ctx.font = '600 16px Georgia, serif'; ctx.fillStyle = '#a04040';
+    ctx.fillText('⚠ KHUSUS PENERIMA TAMU — JANGAN SEBAR KE TAMU', W/2, 740);
+    ctx.font = 'italic 15px Georgia, serif'; ctx.fillStyle = '#3a2060';
+    ctx.fillText('Scan QR ini saat ada tamu yang lupa / tidak', W/2, 775);
+    ctx.fillText('membawa undangan, namun layak dihormati.', W/2, 797);
+    ctx.font = '500 13px Georgia, serif'; ctx.fillStyle = '#6a4a8f';
+    ctx.fillText('Pastikan fitur walk-in AKTIF di panel admin dulu.', W/2, 830);
+
+    _downloadCanvasAsPng(cv, 'qr_walkin_universal.png');
+    const res = document.getElementById('walkin-admin-result');
+    if (res && isDownloadAttrSupported()) res.innerHTML = '<span style="color:#155724">✓ QR walk-in ter-download. Simpan/cetak, berikan HANYA ke penerima tamu.</span>';
+  } catch (err) {
+    showToast('✕ Gagal generate QR walk-in: ' + err.message, 'error');
+  }
+}
+
+// Lihat daftar walk-in (modal sederhana via result div)
+async function viewWalkinList() {
+  const res = document.getElementById('walkin-admin-result');
+  if (!res) return;
+  res.innerHTML = '<em style="color:#888">⏳ Memuat daftar…</em>';
+  const baseUrl = CONFIG.GOOGLE_SCRIPT_URL || CONFIG.SHEET_DATA_URL;
+  if (!baseUrl) { res.innerHTML = '<span style="color:#a04040">URL Apps Script belum diset</span>'; return; }
+  try {
+    const url = baseUrl + '?action=getWalkinConfig&key=' + encodeURIComponent(CONFIG.scannerKey || '') + '&_t=' + Date.now();
+    const r = await fetch(url, { cache: 'no-store' });
+    const json = await r.json();
+    if (!json.success) { res.innerHTML = `<span style="color:#a04040">✗ ${escapeHtml(json.error || 'gagal')}</span>`; return; }
+    if (!json.walkins || json.walkins.length === 0) {
+      res.innerHTML = '<span style="color:#6a4a8f">Belum ada tamu tanpa undangan tercatat.</span>';
+      return;
+    }
+    res.innerHTML = `
+      <div style="background:#fff;border:1px solid #b39ddb;border-radius:6px;padding:8px;max-height:240px;overflow-y:auto">
+        <strong style="font-size:11px;color:#3a2060">${json.count} TAMU TANPA UNDANGAN</strong>
+        ${json.walkins.map(w => {
+          const t = w.timestamp ? new Date(w.timestamp).toLocaleString('id-ID', { dateStyle:'short', timeStyle:'short' }) : '-';
+          return `<div style="padding:6px 0;border-bottom:1px solid #f0ebf7;font-size:11.5px;color:#3a200f">
+            <strong>${escapeHtml(w.name_input)}</strong>${w.category ? ' <span style="color:#6a4a8f">('+escapeHtml(w.category)+')</span>' : ''}
+            ${w.note ? '<br><em style="color:#888;font-size:10.5px">'+escapeHtml(w.note)+'</em>' : ''}
+            <span style="display:block;font-size:10px;color:#999">${t}${w.received_by ? ' • '+escapeHtml(w.received_by) : ''}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  } catch (e) {
+    res.innerHTML = `<span style="color:#a04040">✗ Network: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
 // Share Group QR link ke WA (link saja, atau pakai Web Share API kalau support)
 async function shareGroupQRWA(groupId) {
   const grp = SHEET_GROUPS_LIST.find(g => String(g.group_id || '').trim() === groupId);
@@ -10457,16 +11026,17 @@ let AUDIT_FILTERED_CACHE = [];
 let AUDIT_SCROLL_HANDLER_BOUND = false;
 
 function classifyAttendanceRow(row) {
-  // Return: 'personal' | 'hadir' | 'titipan'
+  // Return: 'personal' | 'hadir' | 'titipan' | 'walkin'
+  const t = String(row.type || '').toLowerCase();
+  if (t === 'walkin') return 'walkin'; // Tamu tanpa undangan (manual)
   const gid = String(row.group_id || '').trim();
   if (!gid) return 'personal'; // QR personal (token-based)
-  const t = String(row.type || '').toLowerCase();
   return t === 'titipan' ? 'titipan' : 'hadir';
 }
 
 function getAttendanceOverallStats() {
   const list = Array.isArray(SHEET_ATTENDANCE_LIST) ? SHEET_ATTENDANCE_LIST : [];
-  let personal = 0, hadir = 0, titipan = 0, override = 0;
+  let personal = 0, hadir = 0, titipan = 0, walkin = 0, override = 0;
   list.forEach(row => {
     const k = classifyAttendanceRow(row);
     // Personal hanya hitung kalau sudah ada redeemed_at
@@ -10474,9 +11044,10 @@ function getAttendanceOverallStats() {
       if (row.redeemed_at) personal++;
     } else if (k === 'hadir')   { hadir++; }
     else if (k === 'titipan') { titipan++; }
+    else if (k === 'walkin')  { walkin++; }
     if (row.is_override) override++;
   });
-  return { personal, hadir, titipan, override, total: personal + hadir + titipan };
+  return { personal, hadir, titipan, walkin, override, total: personal + hadir + titipan + walkin };
 }
 
 function updateAuditOverallStats() {
@@ -10485,6 +11056,7 @@ function updateAuditOverallStats() {
   setNum('audit-stat-personal', s.personal);
   setNum('audit-stat-group-hadir', s.hadir);
   setNum('audit-stat-titipan', s.titipan);
+  setNum('audit-stat-walkin', s.walkin);
   setNum('audit-stat-override', s.override);
   setNum('audit-stat-total', s.total);
 }
@@ -10535,6 +11107,7 @@ function filterAttendance() {
       if (typeF === 'personal' && cls !== 'personal') return false;
       if (typeF === 'hadir' && cls !== 'hadir')   return false;
       if (typeF === 'titipan' && cls !== 'titipan') return false;
+      if (typeF === 'walkin' && cls !== 'walkin') return false;
     }
     // Filter group
     if (groupF === '__personal__') {
@@ -10542,11 +11115,11 @@ function filterAttendance() {
     } else if (groupF) {
       if (String(row.group_id || '').trim() !== groupF) return false;
     }
-    // Search (nama tamu, titipan_untuk, name_input, received_by, token)
+    // Search (nama tamu, titipan_untuk, name_input, received_by, token, note)
     if (q) {
       const haystack = [
         row.name, row.name_input, row.titipan_untuk,
-        row.received_by, row.token, row.group_id, row.session
+        row.received_by, row.token, row.group_id, row.session, row.note
       ].join(' ').toLowerCase();
       if (haystack.indexOf(q) === -1) return false;
     }
@@ -10583,6 +11156,12 @@ function renderAuditRow(row) {
     badges = '<span class="row-badge is-titipan">TITIPAN</span>';
     if (row.is_override) badges += '<span class="row-badge is-override">⚠ OVERRIDE</span>';
     meta = `<span class="row-meta">Rombongan: <strong>${escapeHtml(groupLabel)}</strong></span>`;
+  } else if (cls === 'walkin') {
+    nameDisplay = escapeHtml(row.name_input || '(tanpa nama)');
+    badges = '<span class="row-badge is-walkin">🤝 TANPA UNDANGAN</span>';
+    const cat = row.titipan_untuk ? escapeHtml(row.titipan_untuk) : '';
+    const noteText = row.note ? escapeHtml(row.note) : '';
+    meta = `<span class="row-meta">${cat ? 'Kategori: <strong>' + cat + '</strong>' : 'Walk-in manual'}${noteText ? ' • <em>' + noteText + '</em>' : ''}</span>`;
   }
 
   const timeReceiver = `<span class="row-meta">${escapeHtml(time)}${row.received_by ? ' • diterima oleh: <strong>' + escapeHtml(row.received_by) + '</strong>' : ' • <em>tanpa penerima</em>'}</span>`;
@@ -10651,8 +11230,8 @@ function renderAttendanceAudit() {
 /* === EXPORT CSV LENGKAP === */
 function buildAttendanceCSV(rows) {
   const headers = ['Timestamp', 'Tipe', 'Group ID', 'Nama Rombongan', 'Sesi',
-                   'Nama Tamu (Input)', 'Titipan Untuk', 'Token Personal', 'Nama (Personal)',
-                   'Diterima Oleh', 'Override?', 'Registered At', 'Redeemed At'];
+                   'Nama Tamu (Input)', 'Titipan/Kategori', 'Token Personal', 'Nama (Personal)',
+                   'Diterima Oleh', 'Override?', 'Catatan', 'Registered At', 'Redeemed At'];
   const groupMap = {};
   (SHEET_GROUPS_LIST || []).forEach(g => {
     const gid = String(g.group_id || '').trim();
@@ -10661,7 +11240,8 @@ function buildAttendanceCSV(rows) {
   const dataRows = rows.map(r => {
     const cls = classifyAttendanceRow(r);
     const time = r.redeemed_at ? new Date(r.redeemed_at).toLocaleString('id-ID') : '';
-    const groupName = r.group_id ? (groupMap[String(r.group_id).trim()] || r.group_id) : '';
+    const groupName = cls === 'walkin' ? 'Tamu Tanpa Undangan'
+                     : (r.group_id ? (groupMap[String(r.group_id).trim()] || r.group_id) : '');
     return [
       time,
       cls.toUpperCase(),
@@ -10674,6 +11254,7 @@ function buildAttendanceCSV(rows) {
       r.name || '',
       r.received_by || '',
       r.is_override ? 'YA' : '',
+      r.note || '',
       r.registered_at ? new Date(r.registered_at).toLocaleString('id-ID') : '',
       r.redeemed_at ? new Date(r.redeemed_at).toLocaleString('id-ID') : ''
     ];
